@@ -50,6 +50,7 @@ generate_pseudo_moves :: proc(board: ^C_Board, masks: ^C_Attack_masks){
 	bb, attacks, enpas_attack : u64;
 	UP : int = 8;
 
+	// pawns and castling
 	if board.whitesMove{
 		bb = board.pieces[P];
 		for (bb > 0){
@@ -166,4 +167,87 @@ generate_pseudo_moves :: proc(board: ^C_Board, masks: ^C_Attack_masks){
 		}
 	}
 
+	// start : int = int(B) if board.whitesMove else int(b);
+	// end : int = int(K) + 1 if board.whitesMove else int(k) + 1;
+
+	bb = board.pieces[N if board.whitesMove else n];
+	for (bb > 0){
+		from_sqr = ffs(bb);
+
+		attacks = masks.knight[from_sqr] & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
+		for (attacks > 0){
+			to_sqr = ffs(attacks);
+			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], uint(to_sqr)) > 0{
+				fmt.printf("%s knight capture %s%s\n", board.whitesMove ? "White" : "Black", SQUARE_TO_CHR[from_sqr], SQUARE_TO_CHR[to_sqr]);
+			}else{
+				fmt.printf("%s knight move %s%s\n", board.whitesMove ? "White" : "Black", SQUARE_TO_CHR[from_sqr], SQUARE_TO_CHR[to_sqr])
+			}
+			clear_bit(&attacks, uint(to_sqr));
+		}
+		clear_bit(&bb, uint(from_sqr));
+	}
+	bb = board.pieces[K if board.whitesMove else k];
+	for (bb > 0){
+		from_sqr = ffs(bb);
+
+		attacks = masks.king[from_sqr] & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
+		for (attacks > 0){
+			to_sqr = ffs(attacks);
+			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], uint(to_sqr)) > 0{
+				fmt.printf("%s king capture %s%s\n", board.whitesMove ? "White" : "Black", SQUARE_TO_CHR[from_sqr], SQUARE_TO_CHR[to_sqr]);
+			}else{
+				fmt.printf("%s king move %s%s\n", board.whitesMove ? "White" : "Black", SQUARE_TO_CHR[from_sqr], SQUARE_TO_CHR[to_sqr])
+			}
+			clear_bit(&attacks, uint(to_sqr));
+		}
+		clear_bit(&bb, uint(from_sqr));
+	}
+	bb = board.pieces[R if board.whitesMove else r];
+	for (bb > 0){
+		from_sqr = ffs(bb);
+
+		attacks = get_rook_attacks(masks, uint(from_sqr), board.occupied[COLOR.BOTH]) & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
+		for (attacks > 0){
+			to_sqr = ffs(attacks);
+			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], uint(to_sqr)) > 0{
+				fmt.printf("%s rook capture %s%s\n", board.whitesMove ? "White" : "Black", SQUARE_TO_CHR[from_sqr], SQUARE_TO_CHR[to_sqr]);
+			}else{
+				fmt.printf("%s rook move %s%s\n", board.whitesMove ? "White" : "Black", SQUARE_TO_CHR[from_sqr], SQUARE_TO_CHR[to_sqr])
+			}
+			clear_bit(&attacks, uint(to_sqr));
+		}
+		clear_bit(&bb, uint(from_sqr));
+	}
+	bb = board.pieces[B if board.whitesMove else b];
+	for (bb > 0){
+		from_sqr = ffs(bb);
+
+		attacks = get_bishop_attacks(masks, uint(from_sqr), board.occupied[COLOR.BOTH]) & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
+		for (attacks > 0){
+			to_sqr = ffs(attacks);
+			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], uint(to_sqr)) > 0{
+				fmt.printf("%s rook capture %s%s\n", board.whitesMove ? "White" : "Black", SQUARE_TO_CHR[from_sqr], SQUARE_TO_CHR[to_sqr]);
+			}else{
+				fmt.printf("%s rook move %s%s\n", board.whitesMove ? "White" : "Black", SQUARE_TO_CHR[from_sqr], SQUARE_TO_CHR[to_sqr])
+			}
+			clear_bit(&attacks, uint(to_sqr));
+		}
+		clear_bit(&bb, uint(from_sqr));
+	}
+	bb = board.pieces[Q if board.whitesMove else q];
+	for (bb > 0){
+		from_sqr = ffs(bb);
+
+		attacks = get_queen_attacks(masks, uint(from_sqr), board.occupied[COLOR.BOTH]) & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
+		for (attacks > 0){
+			to_sqr = ffs(attacks);
+			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], uint(to_sqr)) > 0{
+				fmt.printf("%s rook capture %s%s\n", board.whitesMove ? "White" : "Black", SQUARE_TO_CHR[from_sqr], SQUARE_TO_CHR[to_sqr]);
+			}else{
+				fmt.printf("%s rook move %s%s\n", board.whitesMove ? "White" : "Black", SQUARE_TO_CHR[from_sqr], SQUARE_TO_CHR[to_sqr])
+			}
+			clear_bit(&attacks, uint(to_sqr));
+		}
+		clear_bit(&bb, uint(from_sqr));
+	}
 }

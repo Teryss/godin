@@ -17,6 +17,6 @@ main :: proc() {
 	
 	print_board(board);
 	board.enPas = uint(SQUARES.C6);
-	board.whitesMove = false;
+	// board.whitesMove = false;
 	generate_pseudo_moves(board, masks)
 }
