@@ -34,17 +34,29 @@ CASTLING :: enum { K = 1, Q = 2, k = 4, q = 8 };
 PIECES :: enum { p = 0, n, b, r, q, k, P, N, B, R, Q, K };
 // white is upper case
 PIECES_CHR : string = "pnbrqkPNBRQK";
-
+CASTLING_PERM_ON_MOVE : [64]u8 = {
+	 7, 15, 15, 15,  3, 15, 15, 11,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	15, 15, 15, 15, 15, 15, 15, 15,
+	13, 15, 15, 15, 12, 15, 15, 14,
+}
 
 C_Board :: struct {
 	pieces : [12]u64,
 	occupied : [3]u64,
 	fiftyMoves: int,
 	ply: int,
-	moveHistory: [2048]u64,
 	castlePerm: u8,
 	whitesMove: bool,
 	enPas: uint,
+	// The reason for a difference in type size between move and moveHistory is that to every move made there are additional information appended in make_move function 
+	moveHistory: [2048]u64,
+	moves: [256]u64,
+	moves_count : int,
 };
 
 C_Attack_masks :: struct{
@@ -57,7 +69,13 @@ C_Attack_masks :: struct{
 	bishop_attacks : [64][512]u64,
 };
 
-FR_2_SQR :: proc(f, r: int) -> uint{
+C_Move :: struct{
+	from_sqr, to_sqr, piece, promoted_piece : int,
+	is_capture, is_double_push, is_en_passant, is_castling : int,
+	enPas, castlePerm, fiftyMoves, target_piece: int,
+}
+
+FR_2_SQR :: #force_inline proc(f, r: int) -> uint{
 	return uint(r * 8 + f);
 }
 
@@ -75,6 +93,16 @@ print_bitboard :: proc(bb: u64){
 	}
 	fmt.printf("\n       A  B  C  D  E  F  G  H\n")
     fmt.printf("\n\n       Bitboard: %d\n", bb);
+}
+
+print_moves :: proc(board: ^C_Board){
+	fmt.println("Move   Piece  Capture   Double push   En passant   Castling");
+	for i in 0..<board.moves_count{
+		from_sqr, to_sqr, piece, promoted_piece, is_capture, is_double_push, is_en_passant, is_castling : int = decode_move(board.moves[i]);
+		fmt.printf("%s%s%c    %c       %d           %d             %d          %d\n", 
+				SQUARE_TO_CHR[from_sqr], SQUARE_TO_CHR[to_sqr], promoted_piece > 0 ? rune(PIECES_CHR[promoted_piece]) : ' ', rune(PIECES_CHR[piece]), is_capture, is_double_push, is_en_passant, is_castling)
+	}
+	fmt.println("Total number of moves in position:", board.moves_count);
 }
 
 print_board :: proc(board: ^C_Board){
@@ -109,7 +137,7 @@ print_board :: proc(board: ^C_Board){
 	fmt.println()
 }
 
-update_occupied :: proc(board: ^C_Board){
+update_occupied :: #force_inline proc(board: ^C_Board){
     for i in 0..<12{
 	    board.occupied[int(COLOR.BOTH)] |= board.pieces[i]
 	    if i >= int(PIECES.P) { board.occupied[int(COLOR.WHITE)] |= board.pieces[i] }
@@ -167,7 +195,7 @@ load_fen :: proc(board: ^C_Board, fen: string){
 		}else if fen_split[0][i] == '/'{
 			continue;
 		}else{
-			fmt.println("Couldn't parse a piece FEN:", rune(fen_split[0][i]));
+			fmt.println("Couldn't parse a piece in FEN:", rune(fen_split[0][i]));
 		}
 	}
 

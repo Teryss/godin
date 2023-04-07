@@ -47,7 +47,7 @@ init_slider_attacks :: proc (masks: ^C_Attack_masks, bishop: bool){
     }
 }
 
-get_rook_attacks :: proc (masks: ^C_Attack_masks, sqr: uint, occupancy: u64) -> u64 {
+get_rook_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: uint, occupancy: u64) -> u64 {
     occ : u64 = occupancy;
     occ &= masks.rook[sqr];
     occ *= ROOK_MAGICS[sqr]
@@ -55,7 +55,7 @@ get_rook_attacks :: proc (masks: ^C_Attack_masks, sqr: uint, occupancy: u64) -> 
     return masks.rook_attacks[sqr][occ];
 }
 
-get_bishop_attacks :: proc (masks: ^C_Attack_masks, sqr: uint, occupancy: u64) -> u64 {
+get_bishop_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: uint, occupancy: u64) -> u64 {
     occ : u64 = occupancy;
     occ &= masks.bishop[sqr];
     occ *= BISHOP_MAGICS[sqr]
@@ -63,7 +63,7 @@ get_bishop_attacks :: proc (masks: ^C_Attack_masks, sqr: uint, occupancy: u64) -
     return masks.bishop_attacks[sqr][occ];
 }
 
-get_queen_attacks :: proc (masks: ^C_Attack_masks, sqr: uint, occupancy: u64) -> u64 {
+get_queen_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: uint, occupancy: u64) -> u64 {
     return get_bishop_attacks(masks, sqr, occupancy) | get_rook_attacks(masks, sqr, occupancy)
 }
 
