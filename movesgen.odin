@@ -2,7 +2,6 @@ package main
 
 import "core:fmt"
 
-
 is_square_attacked :: #force_inline proc (board: ^C_Board, masks: ^C_Attack_masks, sqr: uint, by_side: COLOR) -> bool{
 	using COLOR;
 	using PIECES;	
@@ -238,14 +237,14 @@ generate_pseudo_moves :: proc(board: ^C_Board, masks: ^C_Attack_masks) #no_bound
 	}
 }
 
-get_target_piece :: proc(borad: ^C_Board, to_sqr : int) -> uint{
+get_target_piece :: #force_inline proc(borad: ^C_Board, to_sqr : int) -> uint{
 	using PIECES
-	for i in p..=K{
+	for i in 0..=12{
 		if get_bit(&borad.pieces[i], uint(to_sqr)) > 0{
 			return uint(i);
 		}
 	}
-	fmt.println("get_target_piece function failed to find target piece")
+	assert(0 == 1);
 	return 0;
 }
 
@@ -255,7 +254,7 @@ enocode_move :: #force_inline proc(from_sqr, to_sqr, piece, promoted_piece, is_c
 }
 
 add_info_to_encoded_move :: #force_inline proc (board: ^C_Board, move: u64) -> u64 { 
-	return move | u64(board.enPas << 24 | uint(board.castlePerm << 30) | uint(board.fiftyMoves) << 36 | (decode_is_capture(move) > 0 ? get_target_piece(board, decode_from_sqr(move)) : 0) << 42)
+	return move | u64(board.enPas << 24 | uint(int(board.castlePerm) << 30) | uint(board.fiftyMoves) << 36 | (decode_is_capture(move) > 0 ? get_target_piece(board, decode_to_sqr(move)) : 0) << 42)
 }
 
 decode_move :: #force_inline proc(move: u64) -> (int, int, int, int, int, int, int, int){
@@ -287,8 +286,6 @@ decode_is_en_passant :: #force_inline proc(move: u64) -> int { return int(move &
 decode_is_castling :: #force_inline proc(move: u64) -> int { return int(move & 0x800000) >> 23; }
 
 make_move :: proc(board: ^C_Board, move: u64){
-	// Moves dont include enpas sqr, castling rights, halfmoves and taken piece
-	// It is added when making a move to reduce the size of moves array
 	board.moveHistory[board.ply] = add_info_to_encoded_move(board, move);
 
 	piece := decode_piece(move);
@@ -297,25 +294,11 @@ make_move :: proc(board: ^C_Board, move: u64){
 	to_sqr := uint(decode_to_sqr(move));
 	promoted_piece := decode_promoted_piece(move);
 
-	// // // from sqr : cleared bits - occ both, occ color, piece
-	// // // occ from sqr updated!
-	// // // from sqr : set bits - occ both, occ color
-	// // // occ to_sqr updated, piece is conditional
-
-	if promoted_piece > 0 {
-		set_bit(&board.pieces[promoted_piece], to_sqr)
-		// setting promoted piece bit
-	}else{
-		set_bit(&board.pieces[piece], to_sqr)
-		// setting itself piece bit
-	}
-
+	if promoted_piece > 0 { set_bit(&board.pieces[promoted_piece], to_sqr) }
+	else { set_bit(&board.pieces[piece], to_sqr) }
 	if decode_is_capture(move) > 0 {
-		fmt.println("Is capture")
-		clear_bit(&board.pieces[get_target_piece(board, int(from_sqr))], to_sqr)
-		// erease piece that was captured from piece
+		clear_bit(&board.pieces[get_target_piece(board, int(to_sqr))], to_sqr)
 		clear_bit(&board.occupied[1 if piece_color == 0 else 1], to_sqr)
-		// erease piece from occ diff color
 	}
 	if decode_is_double_push(move) > 0 {
 		board.enPas = uint(to_sqr + 8 * (-1 if piece_color == 1 else 1))
@@ -324,7 +307,7 @@ make_move :: proc(board: ^C_Board, move: u64){
 	if decode_is_castling(move) > 0 {
 		sq1, sq2 : uint
 		if board.whitesMove{
-			board.castlePerm &= CASTLING_PERM_ON_MOVE[from_sqr]
+			// board.castlePerm &= CASTLING_PERM_ON_MOVE[from_sqr]
 			if to_sqr == uint(SQUARES.B1) { sq1, sq2 = uint(SQUARES.A1), uint(SQUARES.C1) }
 			else { sq1, sq2 = uint(SQUARES.H1), uint(SQUARES.F1) }
 			clear_bit(&board.pieces[int(PIECES.R)], sq1)
@@ -334,7 +317,7 @@ make_move :: proc(board: ^C_Board, move: u64){
 			set_bit(&board.occupied[COLOR.WHITE], sq2)
 			set_bit(&board.occupied[COLOR.BOTH], sq2)
 		}else{
-			board.castlePerm &= CASTLING_PERM_ON_MOVE[from_sqr]
+			// board.castlePerm &= CASTLING_PERM_ON_MOVE[from_sqr]
 			if to_sqr == uint(SQUARES.B1) { sq1, sq2 = uint(SQUARES.A8), uint(SQUARES.C8) }
 			else { sq1, sq2 = uint(SQUARES.H8), uint(SQUARES.F8) }
 			clear_bit(&board.pieces[int(PIECES.R)], sq1)
@@ -345,6 +328,7 @@ make_move :: proc(board: ^C_Board, move: u64){
 			set_bit(&board.occupied[COLOR.BOTH], sq2)
 		}
 	}
+
 	// this should work too
 	board.castlePerm &= CASTLING_PERM_ON_MOVE[from_sqr]
 	board.ply += 1
@@ -359,24 +343,55 @@ make_move :: proc(board: ^C_Board, move: u64){
 
 undo_move :: proc(board: ^C_Board, move: ^C_Move) {
 	piece_color := board.whitesMove ? int(COLOR.BLACK) : int(COLOR.WHITE)
-	// clear_bit(&board.pieces[move.piece], uint(move.to_sqr));
-	// clear_bit(&board.occupied[piece_color], uint(move.to_sqr))
-	// clear_bit(&board.occupied[int(COLOR.BOTH)], uint(move.to_sqr))
-	// set_bit(&board.occupied[piece_color], uint(move.from_sqr))
-	// set_bit(&board.occupied[int(COLOR.BOTH)], uint(move.from_sqr))
-	// set_bit(&board.pieces[move.piece], uint(move.from_sqr));
 
-	// pull back
-	fmt.println(move.from_sqr, move.to_sqr, rune(PIECES_CHR[move.piece]), move.is_capture)
-	set_bit(&board.pieces[move.piece], uint(move.from_sqr))
-	set_bit(&board.occupied[piece_color], uint(move.from_sqr))
-	set_bit(&board.occupied[int(COLOR.BOTH)], uint(move.from_sqr))
+	// set_bit(&board.occupied[0 if piece_color == int(COLOR.BLACK) else 1], move.to_sqr)
+	if move.is_capture > 0 {
+		if move.promoted_piece > 0{
+			
+		}else{
+			set_bit(&board.pieces[move.target_piece], uint(move.to_sqr))
+			clear_bit(&board.pieces[move.piece], uint(move.to_sqr))
+			
+			set_bit(&board.occupied[1 - piece_color], uint(move.to_sqr))
+			clear_bit(&board.occupied[piece_color], uint(move.to_sqr))
+			
+			set_bit(&board.occupied[piece_color], uint(move.from_sqr))
+			set_bit(&board.pieces[move.piece], uint(move.from_sqr))
+			set_bit(&board.occupied[COLOR.BOTH], uint(move.from_sqr))
+		}
+	}else{
+		clear_bit(&board.pieces[move.piece], uint(move.to_sqr))
+		set_bit(&board.pieces[move.piece], uint(move.from_sqr))
+	}
 
-	clear_bit(&board.pieces[move.piece], uint(move.to_sqr));
-	if move.is_capture > 0 { set_bit(&board.pieces[move.target_piece], uint(move.to_sqr))}
-	clear_bit(&board.occupied[piece_color], uint(move.to_sqr))
-	clear_bit(&board.occupied[int(COLOR.BOTH)], uint(move.to_sqr))
+	board.whitesMove = false if board.whitesMove else true
+	if move.is_castling > 0 {
+		sq1, sq2 : uint
+		if board.whitesMove{
+			if move.to_sqr == int(SQUARES.B1) { sq1, sq2 = uint(SQUARES.A1), uint(SQUARES.C1) }
+			else { sq1, sq2 = uint(SQUARES.H1), uint(SQUARES.F1) }
+			set_bit(&board.pieces[int(PIECES.R)], sq1)
+			set_bit(&board.occupied[COLOR.WHITE], sq1)
+			set_bit(&board.occupied[COLOR.BOTH], sq1)
+			clear_bit(&board.pieces[int(PIECES.R)], sq2)
+			clear_bit(&board.occupied[COLOR.WHITE], sq2)
+			clear_bit(&board.occupied[COLOR.BOTH], sq2)
+		}else{
+			if move.to_sqr == int(SQUARES.B1) { sq1, sq2 = uint(SQUARES.A8), uint(SQUARES.C8) }
+			else { sq1, sq2 = uint(SQUARES.H8), uint(SQUARES.F8) }
+			set_bit(&board.pieces[int(PIECES.R)], sq1)
+			set_bit(&board.occupied[COLOR.WHITE], sq1)
+			set_bit(&board.occupied[COLOR.BOTH], sq1)
+			clear_bit(&board.pieces[int(PIECES.R)], sq2)
+			clear_bit(&board.occupied[COLOR.WHITE], sq2)
+			clear_bit(&board.occupied[COLOR.BOTH], sq2)
+		}
+	}
 
-	// board.ply -= 1
-	// board.whitesMove = false if board.whitesMove else true
+	board.castlePerm = u8(move.castlePerm)
+	if move.is_double_push > 0 {
+		if move.enPas > int(SQUARES.A8) { board.enPas = uint(move.enPas) }
+		else { board.enPas = uint(SQUARES.NO_SQR)}  
+	}
+	board.ply -= 1
 } 

@@ -35,7 +35,7 @@ main :: proc() {
 	// fmt.println(2)
 	print_board(board);
 	for i in 0..<board.moves_count{
-		print_single_move(board.moves[i])
+		// print_single_move(board.moves[i])
 		make_move(board, board.moves[i])
 		print_board(board);
 		os.read(os.stdin,x[:])
