@@ -10,89 +10,70 @@ init_all :: proc(masks: ^C_Attack_masks){
 	init_masks(masks);
 }
 
-perft_debug :: proc (board: ^C_Board, masks: ^C_Attack_masks, depth : int) -> u64{
+perft_debug :: proc (board: ^C_Board, masks: ^C_Attack_masks, depth : int, type_counter : ^type_of_moves_counter) -> u64{
 	fmt.printf("Perf test at depth %d \n----------------------\n", depth)
 	nodes : u64 = 0
 	moves : [256]u64
 	moves_count : int = generate_pseudo_moves(board, masks, &moves)
 	nodes_now : u64 = 0
+	do_print := false
 	for i in 0..<moves_count{
-		// fmt.println("Castle perm before", decode_castle_perm(moves[i]))
+		// if decode_is_double_push(moves[i]) > 0 { print_board(board) }
+		// if decode_from_sqr(moves[i]) == int(SQUARES.E8) && decode_to_sqr(moves[i]) == int(SQUARES.D8) { print_board(board) }
 		make_move(board, moves[i])
-		// fmt.println("Castle perm after", decode_castle_perm(moves[i]))
-		if is_king_in_check(board, masks) == false{
-			nodes_now = perft(board, masks, depth - 1)
+		// if decode_from_sqr(moves[i]) == int(SQUARES.E8) && decode_to_sqr(moves[i]) == int(SQUARES.D8) { print_board(board) }
+		if !is_king_in_check(board, masks){
+			if decode_is_en_passant(moves[i]) > 0 { type_counter.enpas += 1 }
+			if decode_is_capture(moves[i]) > 0 { type_counter.captures += 1 }
+			// fmt.println("Recursive call")
+			nodes_now = perft(board, masks, depth - 1, type_counter, do_print)
 			nodes += nodes_now
 		}
 		undo_move(board, moves[i])
+		// if decode_is_double_push(moves[i]) > 0 { print_board(board) }
 		fmt.printf("	%s%s: %d\n", SQUARE_TO_CHR[decode_from_sqr(moves[i])], SQUARE_TO_CHR[decode_to_sqr(moves[i])], nodes_now)
+		nodes_now = 0
 	}
 	fmt.println("----------------------")
 	return nodes
 }
 
-perft :: proc (board: ^C_Board, masks: ^C_Attack_masks, depth : int) -> u64{
+perft :: proc (board: ^C_Board, masks: ^C_Attack_masks, depth : int, type_counter : ^type_of_moves_counter, do_print : bool) -> u64{
 	if depth == 0 { return 1 }
 	nodes : u64 = 0
 	moves : [256]u64
 	moves_count : int = generate_pseudo_moves(board, masks, &moves)
+	_do_print := do_print
 	for i in 0..<moves_count{
-		// if board.whitesMove && decode_is_castling(moves[i]) > 0{
-		// 	fmt.println("Before castling:", depth)
-		// 	fmt.println("Castle perm", decode_castle_perm(moves[i]))
-		// 	print_single_move(moves[i])
-		// 	print_board(board)
-		// }
 		castle_perm := board.castlePerm
 		en_pas := board.enPas
 		fifty := board.fiftyMoves
-		assert(count_bits(board.pieces[PIECES.k]) == 1)
-		assert(count_bits(board.pieces[PIECES.K]) == 1)
+		// assert(count_bits(board.pieces[PIECES.k]) == 1)
+		// assert(count_bits(board.pieces[PIECES.K]) == 1)
 		make_move(board, moves[i])
 		assert(count_bits(board.pieces[PIECES.k]) == 1)
 		assert(count_bits(board.pieces[PIECES.K]) == 1)
-		// if count_bits(board.pieces[PIECES.K]) > 1{
-		// 	fmt.println("2 kings at depth:", depth)
-		// 	print_single_move(moves[i])
-		// 	print_board(board)
-		// 	print_bitboard(board.pieces[PIECES.K])
-		// 	print_bitboard(board.occupied[COLOR.WHITE])
-		// 	print_bitboard(board.occupied[COLOR.BOTH])
-		// }
 		if is_king_in_check(board, masks) == false{
-			// if depth == 1 {
-			// 	if decode_is_castling(moves[i]) > 0{
-			// 		fmt.println("Number of white kings on the board:",count_bits(board.pieces[PIECES.K]))
-			// 		print_single_move(moves[i])
-			// 		// fmt.println(board.castlePerm)
-			// 		print_board(board)
-			// 		print_bitboard(board.pieces[PIECES.K])
-			// 		print_bitboard(board.occupied[COLOR.WHITE])
-			// 		print_bitboard(board.occupied[COLOR.BOTH])
-			// 	}
-			// 	// print_single_move(moves[i])
-			// }
-			nodes += perft(board, masks, depth - 1)
+			if decode_is_en_passant(moves[i]) > 0 { type_counter.enpas += 1 }
+			else if decode_is_capture(moves[i]) > 0 && decode_target_piece(moves[i]) > 0 { type_counter.captures += 1 }
+			// print_board(board)
+			nodes += perft(board, masks, depth - 1, type_counter, do_print)
 		}
-		assert(count_bits(board.pieces[PIECES.k]) == 1)
-		assert(count_bits(board.pieces[PIECES.K]) == 1)
+		// assert(count_bits(board.pieces[PIECES.k]) == 1)
+		// assert(count_bits(board.pieces[PIECES.K]) == 1)
 		undo_move(board, moves[i])
+		// print_board(board)
 		assert(count_bits(board.pieces[PIECES.k]) == 1)
 		assert(count_bits(board.pieces[PIECES.K]) == 1)
 		assert(castle_perm == board.castlePerm)
 		assert(en_pas == board.enPas)
 		assert(fifty == board.fiftyMoves)
-		// if count_bits(board.pieces[PIECES.K]) > 1{
-		// 	fmt.println("2 kings at depth after REMOVING a move:", depth)
-		// 	print_single_move(moves[i])
-		// 	print_board(board)
-		// 	print_bitboard(board.pieces[PIECES.K])
-		// 	print_bitboard(board.occupied[COLOR.WHITE])
-		// 	print_bitboard(board.occupied[COLOR.BOTH])
-		// 	assert(0 == 1)
-		// }
 	}
 	return nodes
+}
+
+type_of_moves_counter :: struct{
+	captures, enpas : int,
 }
 
 main :: proc() {
@@ -100,38 +81,37 @@ main :: proc() {
 	init_all(masks);
 	defer free(masks);
 
-	FEN :: STARTING_POS
-	DEPTH :: 6
+	type_counter : type_of_moves_counter
+
+	FEN :: "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 0"
+	DEPTH :: 7
 
 	board := new(C_Board);
 	load_fen(board, FEN);
 	defer free(board);
 
-	// move := enocode_move(0,0,0,0,0,0,0,1)
-	// board.castlePerm = 13
-	// board.enPas = 0
-	// print_board(board)
-	// move = add_info_to_encoded_move(board,move)
-	// fmt.println("castle perm: ", board.castlePerm)
-	// print_bitboard(move)
-	// fmt.println("Castle perm after decoding:", decode_castle_perm(move))
-	// fmt.println(SQUARE_TO_CHR[decode_en_pas(move)])
-
-	// set_bit(&board.pieces[PIECES.p], uint(SQUARES.C5))
-	// clear_bit(&board.pieces[PIECES.p], uint(SQUARES.C7))
-	// // clear_bit(&board.pieces[PIECES.p], uint(SQUARES.D7))
-	// update_occupied(board)
-	// board.whitesMove = !board.whitesMove
+	// fmt.println(is_square_attacked(board, masks, uint(SQUARES.D8), COLOR.WHITE))
 
 	// moves : [256]u64
-	// moves_cnt := generate_pseudo_moves(board, masks, &moves)
-	// print_moves(&moves, moves_cnt)
+	// move_count := generate_pseudo_moves(board, masks, &moves)
 
-	t1 := time.tick_now()
-	nodes : u64
-	nodes = perft(board, masks, DEPTH)
-	t2 := time.tick_now()
+	// for i in 0..<move_count{
+	// 	print_board(board)
+	// 	make_move(board, moves[i])
+	// 	if decode_is_double_push(moves[i]) > 0 {
+	// 		print_bitboard(board.occupied[COLOR.BOTH])
+	// 		print_bitboard(board.occupied[COLOR.WHITE])
+	// 	}
+	// 	print_board(board)
+	// 	undo_move(board, moves[i])
+	// }
+
+	// t1 := time.tick_now()
+	nodes : u64 = perft_debug(board, masks, DEPTH, &type_counter)
 	fmt.println("Nodes:", nodes)
-	fmt.println("It took:", time.duration_seconds(time.tick_diff(t1, t2)), "seconds")
-	print_board(board)
+	// // t2 := time.tick_now()
+	// // fmt.println("Captures:", type_counter.captures)
+	// // fmt.println("En passant:", type_counter.enpas)	
+	// // fmt.println("It took:", time.duration_seconds(time.tick_diff(t1, t2)), "seconds")
+	// print_board(board)
 }

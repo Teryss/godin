@@ -42,13 +42,6 @@ add_move :: #force_inline proc(board : ^C_Board, moves_count: ^int, move: u64, m
 	}
 	assert(decode_fifty_moves(move_after) == board.fiftyMoves, "Wrong fifty move")
 	assert((decode_is_capture(move_after) > 0 ? int(get_target_piece(board, decode_to_sqr(move_after))) : 0) == decode_target_piece(move_after), "Wrong target square")
-	// if decode_target_piece(move_list[moves_count^]) == 15 {
-	// 	print_board(board)
-	// 	print_bitboard(board.occupied[COLOR.WHITE])
-	// 	print_bitboard(board.pieces[PIECES.P])
-	// 	print_single_move(move_list[moves_count^])
-	// 	assert(1 == 0)
-	// }
 	moves_count^ += 1;
 }
 // #no_bounds_check
@@ -165,8 +158,6 @@ generate_pseudo_moves :: proc(board: ^C_Board, masks: ^C_Attack_masks, move_list
 		}
 		if board.castlePerm & u8(CASTLING.q) > 0{
 			if get_bit(&board.occupied[COLOR.BOTH], uint(D8)) == 0 && get_bit(&board.occupied[COLOR.BOTH], uint(C8)) == 0 && get_bit(&board.occupied[COLOR.BOTH], uint(B8)) == 0{
-				// fmt.println("E8:", is_square_attacked(board, masks, uint(E8), COLOR.WHITE))
-				// fmt.println("D8:", is_square_attacked(board, masks, uint(D8), COLOR.WHITE))
 				if !is_square_attacked(board, masks, uint(E8), COLOR.WHITE) && !is_square_attacked(board, masks, uint(D8), COLOR.WHITE){
 					add_move(board, &moves_count, enocode_move(int(E8), int(C8), int(k), 0, 0, 0, 0, 1), move_list);
 				}
@@ -261,7 +252,7 @@ get_target_piece :: #force_inline proc (borad: ^C_Board, to_sqr : int) -> uint{
 		}
 	}
 	// fmt.println(SQUARE_TO_CHR[to_sqr])
-	// assert(0 == 1);
+	assert(0 == 1, "Couldn't find which piece is going to be captured");
 	return 15;
 }
 
@@ -317,22 +308,23 @@ make_move :: proc(board: ^C_Board, move: u64){
 	if decode_is_castling(move) > 0 {
 		sq1, sq2 : uint
 		if board.whitesMove{
-			if to_sqr == uint(SQUARES.C1) { sq1, sq2 = uint(SQUARES.A1), uint(SQUARES.C1) }
+			if to_sqr == uint(SQUARES.C1) { sq1, sq2 = uint(SQUARES.A1), uint(SQUARES.D1) }
 			else { sq1, sq2 = uint(SQUARES.H1), uint(SQUARES.F1) }
 			clear_bit(&board.pieces[int(PIECES.R)], sq1)
 			set_bit(&board.pieces[int(PIECES.R)], sq2)
 		}else{
-			if to_sqr == uint(SQUARES.C8) { sq1, sq2 = uint(SQUARES.A8), uint(SQUARES.C8) }
+			if to_sqr == uint(SQUARES.C8) { sq1, sq2 = uint(SQUARES.A8), uint(SQUARES.D8) }
 			else { sq1, sq2 = uint(SQUARES.H8), uint(SQUARES.F8) }
 			clear_bit(&board.pieces[int(PIECES.r)], sq1)
 			set_bit(&board.pieces[int(PIECES.r)], sq2)
 		}
 	}
 	if decode_is_en_passant(move) > 0{
-		clear_bit(&board.pieces[PIECES.p if board.whitesMove else PIECES.P], uint(int(to_sqr) - 8 * piece_color))
+		clear_bit(&board.pieces[PIECES.p if board.whitesMove else PIECES.P], uint(to_sqr + 8 * (1 if piece_color == 0 else -1)))
 	}
 
 	board.castlePerm &= CASTLING_PERM_ON_MOVE[from_sqr]
+	board.castlePerm &= CASTLING_PERM_ON_MOVE[to_sqr]
 	board.ply += 1
 	board.whitesMove = !board.whitesMove
 	update_occupied(board)
@@ -363,12 +355,12 @@ undo_move :: proc(board: ^C_Board, move: u64) {
 		// print_single_move(move)
 		sq1, sq2 : uint
 		if board.whitesMove{
-			if to_sqr == int(SQUARES.C1) { sq1, sq2 = uint(SQUARES.A1), uint(SQUARES.C1) }
+			if to_sqr == int(SQUARES.C1) { sq1, sq2 = uint(SQUARES.A1), uint(SQUARES.D1) }
 			else { sq1, sq2 = uint(SQUARES.H1), uint(SQUARES.F1) }
 			set_bit(&board.pieces[int(PIECES.R)], sq1)
 			clear_bit(&board.pieces[int(PIECES.R)], sq2)
 		}else{
-			if to_sqr == int(SQUARES.C8) { sq1, sq2 = uint(SQUARES.A8), uint(SQUARES.C8) }
+			if to_sqr == int(SQUARES.C8) { sq1, sq2 = uint(SQUARES.A8), uint(SQUARES.D8) }
 			else { sq1, sq2 = uint(SQUARES.H8), uint(SQUARES.F8) }
 			set_bit(&board.pieces[int(PIECES.r)], sq1)
 			clear_bit(&board.pieces[int(PIECES.r)], sq2)
@@ -385,6 +377,7 @@ undo_move :: proc(board: ^C_Board, move: u64) {
 is_king_in_check :: #force_inline proc(board: ^C_Board, masks: ^C_Attack_masks) -> bool{
 	board.whitesMove = !board.whitesMove
 	is_in_check := is_square_attacked(board, masks, uint(ffs(board.pieces[PIECES.K if board.whitesMove else PIECES.k])), (COLOR.BLACK if board.whitesMove else COLOR.WHITE))
+	// fmt.println(SQUARE_TO_CHR[ffs(board.pieces[PIECES.K if board.whitesMove else PIECES.k])], is_in_check)
 	board.whitesMove = !board.whitesMove
 	return is_in_check
 }
