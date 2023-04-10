@@ -205,7 +205,6 @@ load_fen :: proc(board: ^C_Board, fen: string){
 		append(&temp, fen[i]);
 		if (len(temp) == 0) { fmt.println("Wrong FEN!"); break; }
 	}
-	fmt.println(fen_split)
 	sqr : uint = uint(SQUARES.A8);
 	for i in 0..<len(fen_split[0]){
 		if fen_split[0][i] >= 'A' && fen_split[0][i] <= 'Z' || fen_split[0][i] >= 'a' && fen_split[0][i] <= 'z'{
