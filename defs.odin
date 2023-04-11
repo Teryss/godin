@@ -33,7 +33,6 @@ SQUARE_TO_CHR : [65]string = {
 COLOR :: enum { WHITE, BLACK, BOTH };
 CASTLING :: enum { K = 1, Q = 2, k = 4, q = 8 };
 PIECES :: enum { p = 0, n, b, r, q, k, P, N, B, R, Q, K };
-// white is upper case
 PIECES_CHR : string = "pnbrqkPNBRQK";
 CASTLING_PERM_ON_MOVE : [64]u8 = {
 	 7, 15, 15, 15,  3, 15, 15, 11,
@@ -45,16 +44,6 @@ CASTLING_PERM_ON_MOVE : [64]u8 = {
 	15, 15, 15, 15, 15, 15, 15, 15,
 	13, 15, 15, 15, 12, 15, 15, 14,
 }
-// CASTLING_PERM_ON_MOVE : [64]u8 = {
-// 	13, 15, 15, 15, 12, 15, 15, 14,
-// 	15, 15, 15, 15, 15, 15, 15, 15,
-// 	15, 15, 15, 15, 15, 15, 15, 15,
-// 	15, 15, 15, 15, 15, 15, 15, 15,
-// 	15, 15, 15, 15, 15, 15, 15, 15,
-// 	15, 15, 15, 15, 15, 15, 15, 15,
-// 	15, 15, 15, 15, 15, 15, 15, 15,
-// 	7, 15, 15, 15,  3, 15, 15, 11,
-// }
 
 C_Board :: struct {
 	pieces : [12]u64,
@@ -64,9 +53,7 @@ C_Board :: struct {
 	castlePerm: u8,
 	whitesMove: bool,
 	enPas: uint,
-	// The reason for a difference in type size between move and moveHistory is that to every move made there are additional information appended in make_move function 
 	moveHistory: [2048]u64,
-	// moves: [256]u64,
 	moves_count : int,
 };
 
@@ -79,12 +66,6 @@ C_Attack_masks :: struct{
 	rook_attacks : [64][4096]u64,
 	bishop_attacks : [64][512]u64,
 };
-
-C_Move :: struct{
-	from_sqr, to_sqr, piece, promoted_piece : int,
-	is_capture, is_double_push, is_en_passant, is_castling : int,
-	enPas, castlePerm, fiftyMoves, target_piece: int,
-}
 
 FR_2_SQR :: #force_inline proc(f, r: int) -> uint{
 	return uint(r * 8 + f);
@@ -104,6 +85,20 @@ print_bitboard :: proc(bb: u64){
 	}
 	fmt.printf("\n       A  B  C  D  E  F  G  H\n")
     fmt.printf("\n\n       Bitboard: %d\n", bb);
+}
+
+print_attacked :: proc(board: ^C_Board, masks: ^C_Attack_masks, side: COLOR) {
+	fmt.println()
+	sqr : uint = 0; 
+    for rank := 7; rank > -1; rank -= 1{
+        for file in 0..<8{
+            if file == 0 { fmt.printf("    %d ", rank + 1); }
+            sqr = FR_2_SQR(file, rank);
+            fmt.printf(" %d ", is_square_attacked(board, masks, sqr, side) ? 1 : 0);
+        }
+        fmt.println()
+    }
+    fmt.println("\n       A  B  C  D  E  F  G  H\n");
 }
 
 print_single_move :: proc(move : u64){
@@ -126,7 +121,6 @@ print_moves :: proc(move_list : ^[256]u64, move_count : int){
 }
 
 print_board :: proc(board: ^C_Board){
-	// bb : u64 = 0;
 	fmt.println()
 	for r in 0..<8{
 		for f in 0..<8{
@@ -136,7 +130,6 @@ print_board :: proc(board: ^C_Board){
 			sqr := (FR_2_SQR(f, r));
 			piece := -10
 			for i in 0..<12{
-				// bb |= board.pieces[i];
 				if get_bit(&board.pieces[i], sqr) > 0 { piece = i; break; };
 			}
 			fmt.printf(" %c ", piece != -10 ? PIECES_CHR[piece] : '.');

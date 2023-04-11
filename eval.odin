@@ -1,0 +1,8 @@
+package main
+
+KING_WT :: 10000
+QUEEN_WT :: 1000
+ROOK_WT :: 525
+BISHOP_WT :: 350
+KNIGHT_WT :: 350
+PAWN_WT :: 100

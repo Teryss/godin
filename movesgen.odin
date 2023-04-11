@@ -1,6 +1,5 @@
 package main
 
-import "core:fmt"
 
 UP :: 8;
 
@@ -17,34 +16,11 @@ is_square_attacked :: #force_inline proc (board: ^C_Board, masks: ^C_Attack_mask
 	return false;
 }
 
-print_attacked :: proc(board: ^C_Board, masks: ^C_Attack_masks, side: COLOR) {
-	fmt.println()
-	sqr : uint = 0; 
-    for rank := 7; rank > -1; rank -= 1{
-        for file in 0..<8{
-            if file == 0 { fmt.printf("    %d ", rank + 1); }
-            sqr = FR_2_SQR(file, rank);
-            fmt.printf(" %d ", is_square_attacked(board, masks, sqr, side) ? 1 : 0);
-        }
-        fmt.println()
-    }
-    fmt.println("\n       A  B  C  D  E  F  G  H\n");
-}
-
 add_move :: #force_inline proc(board : ^C_Board, moves_count: ^int, move: u64, move_list: ^[256]u64){
 	move_list[moves_count^] = add_info_to_encoded_move(board, move);
-
-	move_after := move_list[moves_count^]
-	assert(decode_castle_perm(move_after) == int(board.castlePerm), "Castle perm is wrong")
-	if decode_en_pas(move_after) != int(board.enPas){
-		fmt.println(board.enPas, decode_en_pas(move_after))
-		assert(decode_en_pas(move_after) == int(board.enPas), "En pas sqr wrong")
-	}
-	assert(decode_fifty_moves(move_after) == board.fiftyMoves, "Wrong fifty move")
-	assert((decode_is_capture(move_after) > 0 ? int(get_target_piece(board, decode_to_sqr(move_after))) : 0) == decode_target_piece(move_after), "Wrong target square")
 	moves_count^ += 1;
 }
-// #no_bounds_check
+
 generate_pseudo_moves :: proc(board: ^C_Board, masks: ^C_Attack_masks, move_list: ^[256]u64) -> int #no_bounds_check{
 	using PIECES;
 	using SQUARES;
@@ -228,7 +204,6 @@ generate_pseudo_moves :: proc(board: ^C_Board, masks: ^C_Attack_masks, move_list
 	bb = board.pieces[Q if board.whitesMove else q];
 	for (bb > 0){
 		from_sqr = ffs(bb);
-
 		attacks = get_queen_attacks(masks, uint(from_sqr), board.occupied[COLOR.BOTH]) & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
 		for (attacks > 0){
 			to_sqr = ffs(attacks);
@@ -251,8 +226,6 @@ get_target_piece :: #force_inline proc (borad: ^C_Board, to_sqr : int) -> uint{
 			return uint(i);
 		}
 	}
-	// fmt.println(SQUARE_TO_CHR[to_sqr])
-	assert(0 == 1, "Couldn't find which piece is going to be captured");
 	return 15;
 }
 
@@ -276,7 +249,6 @@ decode_is_capture :: #force_inline proc "contextless" (move: u64) -> int { retur
 decode_is_double_push :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0x200000) >> 21; }
 decode_is_en_passant :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0x400000) >> 22; }
 decode_is_castling :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0x800000) >> 23; }
-// 3F000000
 decode_en_pas :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0x7F000000) >> 24; }
 decode_castle_perm :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0x3F00000000) >> 32 }
 decode_fifty_moves :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0xFC000000000) >> 38 }
