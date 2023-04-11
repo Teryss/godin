@@ -10,15 +10,15 @@ CMK_POSITION :: "r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - 
 REPETITIONS :: "2r3k1/R7/8/1R6/8/8/P4KPP/8 w - - 0 40"
 POS_3 :: "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
 
-SQUARES :: enum {
-	A8, B8, C8, D8, E8, F8, G8, H8,
-	A7, B7, C7, D7, E7, F7, G7, H7,
-	A6, B6, C6, D6, E6, F6, G6, H6,
-	A5, B5, C5, D5, E5, F5, G5, H5,
-	A4, B4, C4, D4, E4, F4, G4, H4,
-	A3, B3, C3, D3, E3, F3, G3, H3,
-	A2, B2, C2, D2, E2, F2, G2, H2,
-	A1, B1, C1, D1, E1, F1, G1, H1, NO_SQR,
+SQUARES :: enum u8{
+	A8 = 0, B8, C8, D8, E8, F8, G8, H8,
+	A7	  , B7, C7, D7, E7, F7, G7, H7,
+	A6	  , B6, C6, D6, E6, F6, G6, H6,
+	A5	  , B5, C5, D5, E5, F5, G5, H5,
+	A4	  , B4, C4, D4, E4, F4, G4, H4,
+	A3	  , B3, C3, D3, E3, F3, G3, H3,
+	A2	  , B2, C2, D2, E2, F2, G2, H2,
+	A1	  , B1, C1, D1, E1, F1, G1, H1, NO_SQR = 64,
 };
 SQUARE_TO_CHR : [65]string = {
 	"a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
@@ -32,7 +32,7 @@ SQUARE_TO_CHR : [65]string = {
 };
 COLOR :: enum { WHITE, BLACK, BOTH };
 CASTLING :: enum { K = 1, Q = 2, k = 4, q = 8 };
-PIECES :: enum { p = 0, n, b, r, q, k, P, N, B, R, Q, K };
+PIECES :: enum u8 { p = 0, n, b, r, q, k, P, N, B, R, Q, K };
 PIECES_CHR : string = "pnbrqkPNBRQK";
 CASTLING_PERM_ON_MOVE : [64]u8 = {
 	 7, 15, 15, 15,  3, 15, 15, 11,
@@ -48,13 +48,13 @@ CASTLING_PERM_ON_MOVE : [64]u8 = {
 C_Board :: struct {
 	pieces : [12]u64,
 	occupied : [3]u64,
-	fiftyMoves: int,
-	ply: int,
+	fiftyMoves: u8,
+	ply: u8,
 	castlePerm: u8,
 	whitesMove: bool,
-	enPas: uint,
+	enPas: u8,
 	moveHistory: [2048]u64,
-	moves_count : int,
+	moves_count : u8,
 };
 
 C_Attack_masks :: struct{
@@ -67,18 +67,19 @@ C_Attack_masks :: struct{
 	bishop_attacks : [64][512]u64,
 };
 
-FR_2_SQR :: #force_inline proc(f, r: int) -> uint{
-	return uint(r * 8 + f);
+FR_2_SQR :: #force_inline proc(f, r: u8) -> u8{
+	return r * 8 + f;
 }
 
 print_bitboard :: proc(bb: u64){
 	bb_p : u64 = bb;
-	for r in 0..<8{
-		for f in 0..<8{
+	r, f : u8 = 0, 0
+	for r : u8 = 0; r < 8; r+=1{
+		for f : u8 = 0; f < 8; f+=1{
 			if f == 0{
 				fmt.printf("    %d ", 8 - r);
 			}
-			sqr := (FR_2_SQR(f, r));
+			sqr := FR_2_SQR(f, r);
 			fmt.printf("%s", get_bit(&bb_p, sqr) > 0 ? " X " : " . ");
 		}
 		fmt.println()
@@ -89,11 +90,11 @@ print_bitboard :: proc(bb: u64){
 
 print_attacked :: proc(board: ^C_Board, masks: ^C_Attack_masks, side: COLOR) {
 	fmt.println()
-	sqr : uint = 0; 
+	sqr : u8 = 0; 
     for rank := 7; rank > -1; rank -= 1{
         for file in 0..<8{
             if file == 0 { fmt.printf("    %d ", rank + 1); }
-            sqr = FR_2_SQR(file, rank);
+            sqr = FR_2_SQR(u8(file), u8(rank));
             fmt.printf(" %d ", is_square_attacked(board, masks, sqr, side) ? 1 : 0);
         }
         fmt.println()
@@ -103,15 +104,15 @@ print_attacked :: proc(board: ^C_Board, masks: ^C_Attack_masks, side: COLOR) {
 
 print_single_move :: proc(move : u64){
 	fmt.println("Move   Piece  Capture   Double push   En passant   Castling");
-	from_sqr, to_sqr, piece, promoted_piece, is_capture, is_double_push, is_en_passant, is_castling : int = decode_move(move);
+	from_sqr, to_sqr, piece, promoted_piece, is_capture, is_double_push, is_en_passant, is_castling : u8 = decode_move(move);
 	fmt.printf("%s%s%c    %c       %d           %d             %d          %d\n", 
 			SQUARE_TO_CHR[from_sqr], SQUARE_TO_CHR[to_sqr], promoted_piece > 0 ? rune(PIECES_CHR[promoted_piece]) : ' ', rune(PIECES_CHR[piece]), is_capture, is_double_push, is_en_passant, is_castling)
 }
 
-print_moves :: proc(move_list : ^[256]u64, move_count : int){
+print_moves :: proc(move_list : ^[256]u64, move_count : u8){
 	fmt.println("Move   Piece  Capture   Double push   En passant   Castling	En passant sqr		Castle perm		Fifty moves 	Target piece");
 	for i in 0..<move_count{
-		from_sqr, to_sqr, piece, promoted_piece, is_capture, is_double_push, is_en_passant, is_castling : int = decode_move(move_list[i]);
+		from_sqr, to_sqr, piece, promoted_piece, is_capture, is_double_push, is_en_passant, is_castling : u8 = decode_move(move_list[i]);
 		fmt.printf("%s%s%c    %c       %d           %d             %d          %d			%s			%d				%d		%c\n", 
 				SQUARE_TO_CHR[from_sqr], SQUARE_TO_CHR[to_sqr], promoted_piece > 0 ? rune(PIECES_CHR[promoted_piece]) : ' ', rune(PIECES_CHR[piece]), is_capture, is_double_push, is_en_passant, is_castling,
 				SQUARE_TO_CHR[decode_en_pas(move_list[i])], decode_castle_perm(move_list[i]), decode_fifty_moves(move_list[i]), PIECES_CHR[decode_target_piece(move_list[i])],
@@ -122,12 +123,12 @@ print_moves :: proc(move_list : ^[256]u64, move_count : int){
 
 print_board :: proc(board: ^C_Board){
 	fmt.println()
-	for r in 0..<8{
-		for f in 0..<8{
+	for r : u8 = 0; r < 8; r+=1{
+		for f : u8 = 0; f < 8; f+=1{
 			if f == 0{
 				fmt.printf("    %d ", 8 - r);
 			}
-			sqr := (FR_2_SQR(f, r));
+			sqr := FR_2_SQR(f, r);
 			piece := -10
 			for i in 0..<12{
 				if get_bit(&board.pieces[i], sqr) > 0 { piece = i; break; };
@@ -198,13 +199,13 @@ load_fen :: proc(board: ^C_Board, fen: string){
 		append(&temp, fen[i]);
 		if (len(temp) == 0) { fmt.println("Wrong FEN!"); break; }
 	}
-	sqr : uint = uint(SQUARES.A8);
+	sqr : u8 = u8(SQUARES.A8);
 	for i in 0..<len(fen_split[0]){
 		if fen_split[0][i] >= 'A' && fen_split[0][i] <= 'Z' || fen_split[0][i] >= 'a' && fen_split[0][i] <= 'z'{
 			set_bit(&board.pieces[u8_piece_to_int(fen_split[0][i])], sqr);
 			sqr += 1;
 		}else if fen_split[0][i] >= '0' && fen_split[0][i] < '9'{
-			sqr += uint(fen_split[0][i]) - uint('0');
+			sqr += u8(fen_split[0][i]) - u8('0');
 		}else if fen_split[0][i] == '/'{
 			continue;
 		}else{
@@ -230,10 +231,10 @@ load_fen :: proc(board: ^C_Board, fen: string){
 		if board.castlePerm == 0 { fmt.println("Wrong castle permission, expected - or combination of KQkq, got:", fen_split[2])};
 	}
 
-	board.enPas = uint(SQUARES.NO_SQR);
-	if fen_split[3][0] != '-' { board.enPas = FR_2_SQR(int(fen_split[3][0] - u8('a')), int(u8('8') - u8(fen_split[3][1])))}
+	board.enPas = u8(SQUARES.NO_SQR);
+	if fen_split[3][0] != '-' { board.enPas = FR_2_SQR(fen_split[3][0] - u8('a'), u8('8') - u8(fen_split[3][1]))}
 
-	board.ply = len(fen_split[5]) == 1 ? int(fen_split[5][0])  - int('0') : (int(fen_split[5][0])  - int('0')) * 10 + int(fen_split[5][1]) - int('0');
-	board.fiftyMoves = len(fen_split[4]) == 1 ? int(fen_split[4][0]) - int('0') : (int(fen_split[4][0]) - int('0')) * 10 + int(fen_split[4][1]) - int('0');
+	board.ply = len(fen_split[5]) == 1 ? u8(fen_split[5][0])  - u8('0') : (u8(fen_split[5][0])  - u8('0')) * 10 + u8(fen_split[5][1]) - u8('0');
+	board.fiftyMoves = len(fen_split[4]) == 1 ? u8(fen_split[4][0]) - u8('0') : (u8(fen_split[4][0]) - u8('0')) * 10 + u8(fen_split[4][1]) - u8('0');
 	update_occupied(board);
 }

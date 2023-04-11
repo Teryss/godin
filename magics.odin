@@ -40,81 +40,81 @@ ROOK_MAGICS : [64]u64 = {
     563158798583922, 5066618438763522, 144221860300195844, 281752018887682,
 }
 
-@(private)
-state : u32 = 1804289383 
+// @(private)
+// state : u32 = 1804289383 
 
-get_random_u32 :: proc() -> u32 {
-    num : u32 = state;
-    num ~= (num << 13);
-    num ~= (num >> 17);
-    num ~= (num << 5);
-    state = num;
-    return state;
-}
+// get_random_u32 :: proc() -> u32 {
+//     num : u32 = state;
+//     num ~= (num << 13);
+//     num ~= (num >> 17);
+//     num ~= (num << 5);
+//     state = num;
+//     return state;
+// }
 
-get_random_u64 :: proc() -> u64 {
-    n1 : u64 = u64(get_random_u32() & 0xFFFF);
-    n2 : u64 = u64(get_random_u32() & 0xFFFF);
-    n3 : u64 = u64(get_random_u32() & 0xFFFF);
-    n4 : u64 = u64(get_random_u32() & 0xFFFF);
+// get_random_u64 :: proc() -> u64 {
+//     n1 : u64 = u64(get_random_u32() & 0xFFFF);
+//     n2 : u64 = u64(get_random_u32() & 0xFFFF);
+//     n3 : u64 = u64(get_random_u32() & 0xFFFF);
+//     n4 : u64 = u64(get_random_u32() & 0xFFFF);
 
-    return n1 | (n2 << 16 ) | (n3 << 32) | (n4 << 48)
-}
+//     return n1 | (n2 << 16 ) | (n3 << 32) | (n4 << 48)
+// }
 
-get_magic_candidate :: proc() -> u64 {
-    return get_random_u64() & get_random_u64() & get_random_u64();
-}
+// get_magic_candidate :: proc() -> u64 {
+//     return get_random_u64() & get_random_u64() & get_random_u64();
+// }
 
-get_magic_number :: proc(masks: ^C_Attack_masks, sqr: int, relevant_bits: int, bishop: bool) -> u64 {
-    occupancies : [4096]u64;
-    attacks : [4096]u64;
-    used_attacks : [4096]u64;
+// get_magic_number :: proc(masks: ^C_Attack_masks, sqr: int, relevant_bits: int, bishop: bool) -> u64 {
+//     occupancies : [4096]u64;
+//     attacks : [4096]u64;
+//     used_attacks : [4096]u64;
     
-    mask : u64 = bishop ? masks.bishop[sqr] : masks.rook[sqr];
-    occupancy_indicies : uint = 1 << uint(relevant_bits);
+//     mask : u64 = bishop ? masks.bishop[sqr] : masks.rook[sqr];
+//     occupancy_indicies : uint = 1 << uint(relevant_bits);
     
-    for i in 0..<occupancy_indicies{
-        occupancies[i] = set_occupancy(int(i), relevant_bits, mask);
-        attacks[i] = bishop ? mask_bishop_attacks_on_fly(uint(sqr), &occupancies[i]) :
-                            mask_rook_attacks_on_fly(uint(sqr), &occupancies[i]);
-    }
+//     for i in 0..<occupancy_indicies{
+//         occupancies[i] = set_occupancy(int(i), relevant_bits, mask);
+//         attacks[i] = bishop ? mask_bishop_attacks_on_fly(uint(sqr), &occupancies[i]) :
+//                             mask_rook_attacks_on_fly(uint(sqr), &occupancies[i]);
+//     }
 
-    for _ in 0..<10000000{
-        magic_number := get_magic_candidate();
+//     for _ in 0..<10000000{
+//         magic_number := get_magic_candidate();
 
-        for i in 0..<4096{
-            used_attacks[i] = 0;
-        }
+//         for i in 0..<4096{
+//             used_attacks[i] = 0;
+//         }
 
-        if count_bits(mask * magic_number & 0xFF00000000000000) < 6 { continue; }
-        fail : bool = false;
+//         if count_bits(mask * magic_number & 0xFF00000000000000) < 6 { continue; }
+//         fail : bool = false;
         
-        for i in 0..<occupancy_indicies{
-            magic_index : u64 = occupancies[i] * magic_number >> uint(64 - relevant_bits)
+//         for i in 0..<occupancy_indicies{
+//             magic_index : u64 = occupancies[i] * magic_number >> uint(64 - relevant_bits)
 
-            if used_attacks[magic_index] == 0{
-                used_attacks[magic_index] = attacks[i];
-            }else if used_attacks[magic_index] != attacks[i]{
-                fail = true;
-                break;
-            }
-        }
+//             if used_attacks[magic_index] == 0{
+//                 used_attacks[magic_index] = attacks[i];
+//             }else if used_attacks[magic_index] != attacks[i]{
+//                 fail = true;
+//                 break;
+//             }
+//         }
 
-        if !fail{
-            return magic_number;
-        } 
-    }
-    return 0;
-}
+//         if !fail{
+//             return magic_number;
+//         } 
+//     }
+//     return 0;
+// }
 
-get_magics :: proc(masks: ^C_Attack_masks){
-    fmt.println("Rook magics:")
-	for i in 0..<64{
-		fmt.println(get_magic_number(masks, i, RELEVANT_OCCUPANCY_BITS_ROOK[i], false),",")
-	}
-	fmt.println("\nBishop magics:")
-	for i in 0..<64{
-		fmt.println(get_magic_number(masks, i, RELEVANT_OCCUPANCY_BITS_BISHOP[i], true),",")
-	}
-}
+// get_magics :: proc(masks: ^C_Attack_masks){
+//     fmt.println("Rook magics:")
+// 	for i in 0..<64{
+// 		fmt.println(get_magic_number(masks, i, RELEVANT_OCCUPANCY_BITS_ROOK[i], false),",")
+// 	}
+// 	fmt.println("\nBishop magics:")
+// 	for i in 0..<64{
+// 		fmt.println(get_magic_number(masks, i, RELEVANT_OCCUPANCY_BITS_BISHOP[i], true),",")
+// 	}
+// }
 

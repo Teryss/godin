@@ -3,139 +3,141 @@ package main
 
 UP :: 8;
 
-is_square_attacked :: #force_inline proc (board: ^C_Board, masks: ^C_Attack_masks, sqr: uint, by_side: COLOR) -> bool{
+is_square_attacked :: #force_inline proc (board: ^C_Board, masks: ^C_Attack_masks, sqr: u8, by_side: COLOR) -> bool{
 	using COLOR;
 	using PIECES;	
-	if by_side == WHITE && (masks.pawn[int(BLACK)][sqr] & board.pieces[int(P)]) > 0 { return true; }
-	if by_side == BLACK && (masks.pawn[int(WHITE)][sqr] & board.pieces[int(p)]) > 0 { return true; }
-	if masks.king[sqr] & board.pieces[int(K) if by_side == WHITE else int(k)] > 0 { return true; }
-	if masks.knight[sqr] & board.pieces[int(N) if by_side == WHITE else int(n)] > 0 { return true; }
-	if get_rook_attacks(masks, sqr, board.occupied[BOTH]) & board.pieces[by_side == WHITE ? int(R) : int(r)] > 0 { return true; }
-	if get_bishop_attacks(masks, sqr, board.occupied[BOTH]) & board.pieces[by_side == WHITE ? int(B) : int(b)] > 0 { return true; }
-	if get_queen_attacks(masks, sqr, board.occupied[BOTH]) & board.pieces[by_side == WHITE ? int(Q) : int(q)] > 0 { return true; }
+	if by_side == WHITE && (masks.pawn[BLACK][sqr] & board.pieces[P]) > 0 { return true; }
+	if by_side == BLACK && (masks.pawn[WHITE][sqr] & board.pieces[p]) > 0 { return true; }
+	if masks.king[sqr] & board.pieces[u8(K) if by_side == WHITE else u8(k)] > 0 { return true; }
+	if masks.knight[sqr] & board.pieces[u8(N) if by_side == WHITE else u8(n)] > 0 { return true; }
+	if get_rook_attacks(masks, sqr, board.occupied[BOTH]) & board.pieces[by_side == WHITE ? u8(R) : u8(r)] > 0 { return true; }
+	if get_bishop_attacks(masks, sqr, board.occupied[BOTH]) & board.pieces[by_side == WHITE ? u8(B) : u8(b)] > 0 { return true; }
+	if get_queen_attacks(masks, sqr, board.occupied[BOTH]) & board.pieces[by_side == WHITE ? u8(Q) : u8(q)] > 0 { return true; }
 	return false;
 }
 
-add_move :: #force_inline proc(board : ^C_Board, moves_count: ^int, move: u64, move_list: ^[256]u64){
+add_move :: #force_inline proc(board : ^C_Board, moves_count: ^u8, move: u64, move_list: ^[256]u64){
 	move_list[moves_count^] = add_info_to_encoded_move(board, move);
 	moves_count^ += 1;
 }
 
-generate_pseudo_moves :: proc(board: ^C_Board, masks: ^C_Attack_masks, move_list: ^[256]u64) -> int #no_bounds_check{
+import "core:fmt"
+
+generate_pseudo_moves :: proc(board: ^C_Board, masks: ^C_Attack_masks, move_list: ^[256]u64) -> u8 #no_bounds_check{
 	using PIECES;
 	using SQUARES;
 	
-	moves_count : int = 0
-	from_sqr, to_sqr : int;
+	moves_count : u8 = 0
+	from_sqr, to_sqr : u8;
 	bb, attacks, enpas_attack : u64;
 	
 	if board.whitesMove{
-		bb = board.pieces[P];
+		bb = board.pieces[u8(P)];
 		for (bb > 0){
 			from_sqr = ffs(bb);
 			to_sqr = from_sqr - UP;
-			if to_sqr > -1 && get_bit(&board.occupied[int(COLOR.BOTH)], uint(to_sqr)) == 0{
-				if to_sqr < int(A7){
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(P), int(Q), 0, 0, 0, 0), move_list);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(P), int(R), 0, 0, 0, 0), move_list);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(P), int(B), 0, 0, 0, 0), move_list);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(P), int(N), 0, 0, 0, 0), move_list);
+			if get_bit(&board.occupied[int(COLOR.BOTH)], to_sqr) == 0{
+				if to_sqr < u8(A7){
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(P), u8(Q), 0, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(P), u8(R), 0, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(P), u8(B), 0, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(P), u8(N), 0, 0, 0, 0), move_list);
 				}else{
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(P), 0, 0, 0, 0, 0), move_list);
-					if from_sqr > int(H3) && get_bit(&board.occupied[int(COLOR.BOTH)], uint(to_sqr - UP)) == 0{
-						add_move(board, &moves_count, enocode_move(from_sqr, to_sqr - UP, int(P), 0, 0, 1, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(P), 0, 0, 0, 0, 0), move_list);
+					if from_sqr > u8(H3) && get_bit(&board.occupied[COLOR.BOTH], to_sqr - UP) == 0{
+						add_move(board, &moves_count, enocode_move(from_sqr, to_sqr - UP, u8(P), 0, 0, 1, 0, 0), move_list);
 					}
 				}
 			}
 
-			attacks = masks.pawn[int(COLOR.WHITE)][from_sqr] & board.occupied[int(COLOR.BLACK)]
+			attacks = masks.pawn[COLOR.WHITE][from_sqr] & board.occupied[COLOR.BLACK]
 			for (attacks > 0){
 				to_sqr = ffs(attacks)
-				if to_sqr < int(A7){
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(P), int(Q), 1, 0, 0, 0), move_list);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(P), int(R), 1, 0, 0, 0), move_list);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(P), int(B), 1, 0, 0, 0), move_list);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(P), int(N), 1, 0, 0, 0), move_list);
+				if to_sqr < u8(A7){
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(P), u8(Q), 1, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(P), u8(R), 1, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(P), u8(B), 1, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(P), u8(N), 1, 0, 0, 0), move_list);
 				}else{
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(P), 0, 1, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(P), 0, 1, 0, 0, 0), move_list);
 				}
-				clear_bit(&attacks, uint(to_sqr));
+				clear_bit(&attacks, to_sqr);
 			}
-			if board.enPas != uint(NO_SQR){
-				enpas_attack = masks.pawn[int(COLOR.WHITE)][from_sqr] & (1 << board.enPas);
+			if board.enPas != u8(NO_SQR){
+				enpas_attack = masks.pawn[COLOR.WHITE][from_sqr] & (1 << board.enPas);
 				if enpas_attack > 0{
 					to_sqr = ffs(enpas_attack);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(P), 0, 0, 0, 1, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(P), 0, 0, 0, 1, 0), move_list);
 				}
 			}
-			clear_bit(&bb, uint(from_sqr));
+			clear_bit(&bb, from_sqr);
 		}
 		if board.castlePerm & u8(CASTLING.K) > 0{
-			if get_bit(&board.occupied[COLOR.BOTH], uint(G1)) == 0 && get_bit(&board.occupied[COLOR.BOTH], uint(F1)) == 0{
-				if !is_square_attacked(board, masks, uint(E1), COLOR.BLACK) && !is_square_attacked(board, masks, uint(F1), COLOR.BLACK){
-					add_move(board, &moves_count, enocode_move(int(E1), int(G1), int(K), 0, 0, 0, 0, 1), move_list);
+			if get_bit(&board.occupied[COLOR.BOTH], u8(G1)) == 0 && get_bit(&board.occupied[COLOR.BOTH], u8(F1)) == 0{
+				if !is_square_attacked(board, masks, u8(E1), COLOR.BLACK) && !is_square_attacked(board, masks, u8(F1), COLOR.BLACK){
+					add_move(board, &moves_count, enocode_move(u8(E1), u8(G1), u8(K), 0, 0, 0, 0, 1), move_list);
 				}
 			}
 		}
 		if board.castlePerm & u8(CASTLING.Q) > 0{
-			if get_bit(&board.occupied[COLOR.BOTH], uint(D1)) == 0 && get_bit(&board.occupied[COLOR.BOTH], uint(C1)) == 0 && get_bit(&board.occupied[COLOR.BOTH], uint(B1)) == 0{
-				if !is_square_attacked(board, masks, uint(E1), COLOR.BLACK) && !is_square_attacked(board, masks, uint(D1), COLOR.BLACK){
-					add_move(board, &moves_count, enocode_move(int(E1), int(C1), int(K), 0, 0, 0, 0, 1), move_list);
+			if get_bit(&board.occupied[COLOR.BOTH], u8(D1)) == 0 && get_bit(&board.occupied[COLOR.BOTH], u8(C1)) == 0 && get_bit(&board.occupied[COLOR.BOTH], u8(B1)) == 0{
+				if !is_square_attacked(board, masks, u8(E1), COLOR.BLACK) && !is_square_attacked(board, masks, u8(D1), COLOR.BLACK){
+					add_move(board, &moves_count, enocode_move(u8(E1), u8(C1), u8(K), 0, 0, 0, 0, 1), move_list);
 				}
 			}
 		}
 	}else{
-		bb = board.pieces[p];
+		bb = board.pieces[u8(p)];
 		for (bb > 0){
 			from_sqr = ffs(bb);
 			to_sqr = from_sqr + UP;
 
-			if to_sqr < 64 && get_bit(&board.occupied[int(COLOR.BOTH)], uint(to_sqr)) == 0{
-				if to_sqr > int(H2){
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(p), int(q), 0, 0, 0, 0), move_list);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(p), int(r), 0, 0, 0, 0), move_list);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(p), int(b), 0, 0, 0, 0), move_list);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(p), int(n), 0, 0, 0, 0), move_list);
+			if to_sqr < 64 && get_bit(&board.occupied[COLOR.BOTH], to_sqr) == 0{
+				if to_sqr > u8(H2){
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(p), u8(q), 0, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(p), u8(r), 0, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(p), u8(b), 0, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(p), u8(n), 0, 0, 0, 0), move_list);
 				}else{
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(p), 0, 0, 0, 0, 0), move_list);
-					if from_sqr < int(A6) && get_bit(&board.occupied[int(COLOR.BOTH)], uint(to_sqr + UP)) == 0{
-						add_move(board, &moves_count, enocode_move(from_sqr, to_sqr + UP, int(p), 0, 0, 1, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(p), 0, 0, 0, 0, 0), move_list);
+					if from_sqr < u8(A6) && get_bit(&board.occupied[COLOR.BOTH], to_sqr + UP) == 0{
+						add_move(board, &moves_count, enocode_move(from_sqr, to_sqr + UP, u8(p), 0, 0, 1, 0, 0), move_list);
 					}
 				}
 			}
-			attacks = masks.pawn[int(COLOR.BLACK)][from_sqr] & board.occupied[int(COLOR.WHITE)]
+			attacks = masks.pawn[int(COLOR.BLACK)][from_sqr] & board.occupied[COLOR.WHITE]
 			for (attacks > 0){
 				to_sqr = ffs(attacks)
-				if to_sqr > int(H2){
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(p), int(q), 1, 0, 0, 0), move_list);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(p), int(r), 1, 0, 0, 0), move_list);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(p), int(b), 1, 0, 0, 0), move_list);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(p), int(n), 1, 0, 0, 0), move_list);
+				if to_sqr > u8(H2){
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(p), u8(q), 1, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(p), u8(r), 1, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(p), u8(b), 1, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(p), u8(n), 1, 0, 0, 0), move_list);
 				}else{
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(p), 0, 1, 0, 0, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(p), 0, 1, 0, 0, 0), move_list);
 				}
-				clear_bit(&attacks, uint(to_sqr));
+				clear_bit(&attacks, to_sqr);
 			}
-			if board.enPas != uint(NO_SQR){
-				enpas_attack = masks.pawn[int(COLOR.BLACK)][from_sqr] & (1 << board.enPas);
+			if board.enPas != u8(NO_SQR){
+				enpas_attack = masks.pawn[COLOR.BLACK][from_sqr] & (1 << board.enPas);
 				if enpas_attack > 0{
 					to_sqr = ffs(enpas_attack);
-					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(p), 0, 0, 0, 1, 0), move_list);
+					add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(p), 0, 0, 0, 1, 0), move_list);
 				}
 			}
-			clear_bit(&bb, uint(from_sqr));
+			clear_bit(&bb, from_sqr);
 		}
 		if board.castlePerm & u8(CASTLING.k) > 0{
-			if get_bit(&board.occupied[COLOR.BOTH], uint(G8)) == 0 && get_bit(&board.occupied[COLOR.BOTH], uint(F8)) == 0{
-				if !is_square_attacked(board, masks, uint(E8), COLOR.WHITE) && !is_square_attacked(board, masks, uint(F8), COLOR.WHITE){
-					add_move(board, &moves_count, enocode_move(int(E8), int(G8), int(k), 0, 0, 0, 0, 1), move_list);
+			if get_bit(&board.occupied[COLOR.BOTH], u8(G8)) == 0 && get_bit(&board.occupied[COLOR.BOTH], u8(F8)) == 0{
+				if !is_square_attacked(board, masks, u8(E8), COLOR.WHITE) && !is_square_attacked(board, masks, u8(F8), COLOR.WHITE){
+					add_move(board, &moves_count, enocode_move(u8(E8), u8(G8), u8(k), 0, 0, 0, 0, 1), move_list);
 				}
 			}
 		}
 		if board.castlePerm & u8(CASTLING.q) > 0{
-			if get_bit(&board.occupied[COLOR.BOTH], uint(D8)) == 0 && get_bit(&board.occupied[COLOR.BOTH], uint(C8)) == 0 && get_bit(&board.occupied[COLOR.BOTH], uint(B8)) == 0{
-				if !is_square_attacked(board, masks, uint(E8), COLOR.WHITE) && !is_square_attacked(board, masks, uint(D8), COLOR.WHITE){
-					add_move(board, &moves_count, enocode_move(int(E8), int(C8), int(k), 0, 0, 0, 0, 1), move_list);
+			if get_bit(&board.occupied[COLOR.BOTH], u8(D8)) == 0 && get_bit(&board.occupied[COLOR.BOTH], u8(C8)) == 0 && get_bit(&board.occupied[COLOR.BOTH], u8(B8)) == 0{
+				if !is_square_attacked(board, masks, u8(E8), COLOR.WHITE) && !is_square_attacked(board, masks, u8(D8), COLOR.WHITE){
+					add_move(board, &moves_count, enocode_move(u8(E8), u8(C8), u8(k), 0, 0, 0, 0, 1), move_list);
 				}
 			}
 		}
@@ -147,14 +149,14 @@ generate_pseudo_moves :: proc(board: ^C_Board, masks: ^C_Attack_masks, move_list
 		attacks = masks.knight[from_sqr] & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
 		for (attacks > 0){
 			to_sqr = ffs(attacks);
-			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], uint(to_sqr)) > 0{
-				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(N if board.whitesMove else n), 0, 1, 0, 0, 0), move_list);
+			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], to_sqr) > 0{
+				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(N if board.whitesMove else n), 0, 1, 0, 0, 0), move_list);
 			}else{
-				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(N if board.whitesMove else n), 0, 0, 0, 0, 0), move_list);
+				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(N if board.whitesMove else n), 0, 0, 0, 0, 0), move_list);
 			}
-			clear_bit(&attacks, uint(to_sqr));
+			clear_bit(&attacks, to_sqr);
 		}
-		clear_bit(&bb, uint(from_sqr));
+		clear_bit(&bb, from_sqr);
 	}
 	bb = board.pieces[K if board.whitesMove else k];
 	for (bb > 0){
@@ -162,137 +164,138 @@ generate_pseudo_moves :: proc(board: ^C_Board, masks: ^C_Attack_masks, move_list
 		attacks = masks.king[from_sqr] & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
 		for (attacks > 0){
 			to_sqr = ffs(attacks);
-			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], uint(to_sqr)) > 0{
-				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(K if board.whitesMove else k), 0, 1, 0, 0, 0), move_list);
+			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], to_sqr) > 0{
+				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(K if board.whitesMove else k), 0, 1, 0, 0, 0), move_list);
 			}else{
-				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(K if board.whitesMove else k), 0, 0, 0, 0, 0), move_list);
+				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(K if board.whitesMove else k), 0, 0, 0, 0, 0), move_list);
 			}
-			clear_bit(&attacks, uint(to_sqr));
+			clear_bit(&attacks, to_sqr);
 		}
-		clear_bit(&bb, uint(from_sqr));
+		clear_bit(&bb, from_sqr);
 	}
 	bb = board.pieces[R if board.whitesMove else r];
 	for (bb > 0){
 		from_sqr = ffs(bb);
-		attacks = get_rook_attacks(masks, uint(from_sqr), board.occupied[COLOR.BOTH]) & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
+		attacks = get_rook_attacks(masks, from_sqr, board.occupied[COLOR.BOTH]) & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
 		for (attacks > 0){
 			to_sqr = ffs(attacks);
-			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], uint(to_sqr)) > 0{
-				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(R if board.whitesMove else r), 0, 1, 0, 0, 0), move_list);
+			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], to_sqr) > 0{
+				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(R if board.whitesMove else r), 0, 1, 0, 0, 0), move_list);
 			}else{
-				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(R if board.whitesMove else r), 0, 0, 0, 0, 0), move_list);
+				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(R if board.whitesMove else r), 0, 0, 0, 0, 0), move_list);
 			}
-			clear_bit(&attacks, uint(to_sqr));
+			clear_bit(&attacks, to_sqr);
 		}
-		clear_bit(&bb, uint(from_sqr));
+		clear_bit(&bb, from_sqr);
 	}
 	bb = board.pieces[B if board.whitesMove else b];
 	for (bb > 0){
 		from_sqr = ffs(bb);
-		attacks = get_bishop_attacks(masks, uint(from_sqr), board.occupied[COLOR.BOTH]) & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
+		attacks = get_bishop_attacks(masks, from_sqr, board.occupied[COLOR.BOTH]) & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
 		for (attacks > 0){
 			to_sqr = ffs(attacks);
-			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], uint(to_sqr)) > 0{
-				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(B if board.whitesMove else b), 0, 1, 0, 0, 0), move_list);
+			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], to_sqr) > 0{
+				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(B if board.whitesMove else b), 0, 1, 0, 0, 0), move_list);
 			}else{
-				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(B if board.whitesMove else b), 0, 0, 0, 0, 0), move_list);
+				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(B if board.whitesMove else b), 0, 0, 0, 0, 0), move_list);
 			}
-			clear_bit(&attacks, uint(to_sqr));
+			clear_bit(&attacks, to_sqr);
 		}
-		clear_bit(&bb, uint(from_sqr));
+		clear_bit(&bb, from_sqr);
 	}
 	bb = board.pieces[Q if board.whitesMove else q];
 	for (bb > 0){
 		from_sqr = ffs(bb);
-		attacks = get_queen_attacks(masks, uint(from_sqr), board.occupied[COLOR.BOTH]) & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
+		attacks = get_queen_attacks(masks, from_sqr, board.occupied[COLOR.BOTH]) & (board.whitesMove ? ~board.occupied[COLOR.WHITE] : ~board.occupied[COLOR.BLACK]);
 		for (attacks > 0){
 			to_sqr = ffs(attacks);
-			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], uint(to_sqr)) > 0{
-				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(Q if board.whitesMove else q), 0, 1, 0, 0, 0), move_list);
+			if get_bit(board.whitesMove ? &board.occupied[COLOR.BLACK] : &board.occupied[COLOR.WHITE], to_sqr) > 0{
+				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(Q if board.whitesMove else q), 0, 1, 0, 0, 0), move_list);
 			}else{
-				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, int(Q if board.whitesMove else q), 0, 0, 0, 0, 0), move_list);
+				add_move(board, &moves_count, enocode_move(from_sqr, to_sqr, u8(Q if board.whitesMove else q), 0, 0, 0, 0, 0), move_list);
 			}
-			clear_bit(&attacks, uint(to_sqr));
+			clear_bit(&attacks, to_sqr);
 		}
-		clear_bit(&bb, uint(from_sqr));
+		clear_bit(&bb, from_sqr);
 	}
 	return moves_count
 }
 
-get_target_piece :: #force_inline proc (borad: ^C_Board, to_sqr : int) -> uint{
-	using PIECES
-	for i in 0..<12{
-		if get_bit(&borad.pieces[i], uint(to_sqr)) > 0{
-			return uint(i);
+get_target_piece :: #force_inline proc (borad: ^C_Board, to_sqr : u8) -> u8{
+	for i : u8 = 0; i < 12; i+=1{
+		if get_bit(&borad.pieces[i], to_sqr) > 0{
+			return i;
 		}
 	}
 	return 15;
 }
 
-enocode_move :: #force_inline proc "contextless" (from_sqr, to_sqr, piece, promoted_piece, is_capture, is_double_push, is_en_passant, is_castling: int) -> u64{
-	return u64(from_sqr | to_sqr << 6 | piece << 12 | promoted_piece << 16 | is_capture << 20 | is_double_push << 21 | is_en_passant << 22 | is_castling << 23); 
+enocode_move :: #force_inline proc (from_sqr, to_sqr, piece, promoted_piece, is_capture, is_double_push, is_en_passant, is_castling: u8) -> u64{
+	// fmt.println("Original:", from_sqr, to_sqr, piece, promoted_piece, is_capture, is_double_push, is_en_passant, is_castling)
+	// fmt.println("After encoding:", decode_move(u64(from_sqr) | u64(to_sqr) << 6 | u64(piece) << 12 | u64(promoted_piece) << 16 | u64(is_capture) << 20 | u64(is_double_push) << 21 | u64(is_en_passant) << 22 | u64(is_castling)  << 23))
+	return (u64(from_sqr) | u64(to_sqr) << 6 | u64(piece) << 12 | u64(promoted_piece) << 16 | u64(is_capture) << 20 | u64(is_double_push) << 21 | u64(is_en_passant) << 22 | u64(is_castling)  << 23); 
 }
 
 add_info_to_encoded_move :: #force_inline proc (board: ^C_Board, move: u64) -> u64 { 
-	return move | u64(board.enPas << 24 | uint(board.castlePerm) << 32 | uint(board.fiftyMoves) << 38 | (decode_is_capture(move) > 0 ? get_target_piece(board, decode_to_sqr(move)) : 0) << 44)
+	return (move | u64(board.enPas) << 24 | u64(board.castlePerm) << 32 | u64(board.fiftyMoves) << 38 | u64((decode_is_capture(move) > 0 ? get_target_piece(board, decode_to_sqr(move)) : 0)) << 44)
 }
 
-decode_move :: #force_inline proc "contextless" (move: u64) -> (int, int, int, int, int, int, int, int){
-	return int(move & 0x3f), int(move & 0xfc0) >> 6, int(move & 0xf000) >> 12, int(move & 0xf0000) >> 16, int(move & 0x100000) >> 20, int(move & 0x200000) >> 21, int(move & 0x400000) >> 22, int(move & 0x800000) >> 23
+decode_move :: #force_inline proc (move: u64) -> (u8, u8, u8, u8, u8, u8, u8, u8){
+	return u8(move & 0x3f), u8(move & 0xfc0 >> 6), u8(move & 0xf000 >> 12), u8(move & 0xf0000 >> 16), u8(move & 0x100000 >> 20), u8(move & 0x200000 >> 21), u8(move & 0x400000 >> 22), u8(move & 0x800000 >> 23)
 }
 
-decode_from_sqr :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0x3f); }
-decode_to_sqr :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0xfc0) >> 6; }
-decode_piece :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0xf000) >> 12; }
-decode_promoted_piece :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0xf0000) >> 16; }
-decode_is_capture :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0x100000) >> 20; }
-decode_is_double_push :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0x200000) >> 21; }
-decode_is_en_passant :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0x400000) >> 22; }
-decode_is_castling :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0x800000) >> 23; }
-decode_en_pas :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0x7F000000) >> 24; }
-decode_castle_perm :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0x3F00000000) >> 32 }
-decode_fifty_moves :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0xFC000000000) >> 38 }
-decode_target_piece :: #force_inline proc "contextless" (move: u64) -> int { return int(move & 0x3F00000000000) >> 44; }
+decode_from_sqr :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x3f); }
+decode_to_sqr :: #force_inline proc (move: u64) -> u8 { return u8(move & 0xfc0 >> 6); }
+decode_piece :: #force_inline proc (move: u64) -> u8 { return u8(move & 0xf000 >> 12); }
+decode_promoted_piece :: #force_inline proc (move: u64) -> u8 { return u8(move & 0xf0000 >> 16); }
+decode_is_capture :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x100000 >> 20); }
+decode_is_double_push :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x200000 >> 21); }
+decode_is_en_passant :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x400000 >> 22); }
+decode_is_castling :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x800000 >> 23); }
+decode_en_pas :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x7F000000 >> 24); }
+decode_castle_perm :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x3F00000000 >> 32) }
+decode_fifty_moves :: #force_inline proc (move: u64) -> u8 { return u8(move & 0xFC000000000 >> 38) }
+decode_target_piece :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x3F00000000000 >> 44); }
 
 make_move :: proc(board: ^C_Board, move: u64){
 	board.moveHistory[board.ply] = move
 	piece := decode_piece(move);
 	piece_color := board.whitesMove ? int(COLOR.WHITE) : int(COLOR.BLACK)
-	from_sqr := uint(decode_from_sqr(move));
-	to_sqr := uint(decode_to_sqr(move));
+	from_sqr := u8(decode_from_sqr(move));
+	to_sqr := u8(decode_to_sqr(move));
 	promoted_piece := decode_promoted_piece(move);
 
 	clear_bit(&board.pieces[piece], from_sqr);
-	board.enPas = uint(SQUARES.NO_SQR)
+	board.enPas = u8(SQUARES.NO_SQR)
 
 	if promoted_piece > 0 { set_bit(&board.pieces[promoted_piece], to_sqr) }
 	else { set_bit(&board.pieces[piece], to_sqr) }
 
 	if decode_is_capture(move) > 0 {
 		board.fiftyMoves = 0
-		clear_bit(&board.pieces[decode_target_piece(move)], uint(to_sqr))
+		clear_bit(&board.pieces[decode_target_piece(move)], to_sqr)
 	}else{
-		if (piece != int(PIECES.P) && piece != int(PIECES.p)) { board.fiftyMoves += 1 }
+		if (piece != u8(PIECES.P) && piece != u8(PIECES.p)) { board.fiftyMoves += 1 }
 	}
 	if decode_is_double_push(move) > 0 {
-		board.enPas = uint(to_sqr + 8 * (-1 if piece_color == 1 else 1))
+		board.enPas = u8(to_sqr + 8 * (-1 if piece_color == 1 else 1))
 	}
 	if decode_is_castling(move) > 0 {
-		sq1, sq2 : uint
+		sq1, sq2 : u8
 		if board.whitesMove{
-			if to_sqr == uint(SQUARES.C1) { sq1, sq2 = uint(SQUARES.A1), uint(SQUARES.D1) }
-			else { sq1, sq2 = uint(SQUARES.H1), uint(SQUARES.F1) }
-			clear_bit(&board.pieces[int(PIECES.R)], sq1)
-			set_bit(&board.pieces[int(PIECES.R)], sq2)
+			if to_sqr == u8(SQUARES.C1) { sq1, sq2 = u8(SQUARES.A1), u8(SQUARES.D1) }
+			else { sq1, sq2 = u8(SQUARES.H1), u8(SQUARES.F1) }
+			clear_bit(&board.pieces[PIECES.R], sq1)
+			set_bit(&board.pieces[PIECES.R], sq2)
 		}else{
-			if to_sqr == uint(SQUARES.C8) { sq1, sq2 = uint(SQUARES.A8), uint(SQUARES.D8) }
-			else { sq1, sq2 = uint(SQUARES.H8), uint(SQUARES.F8) }
-			clear_bit(&board.pieces[int(PIECES.r)], sq1)
-			set_bit(&board.pieces[int(PIECES.r)], sq2)
+			if to_sqr == u8(SQUARES.C8) { sq1, sq2 = u8(SQUARES.A8), u8(SQUARES.D8) }
+			else { sq1, sq2 = u8(SQUARES.H8), u8(SQUARES.F8) }
+			clear_bit(&board.pieces[PIECES.r], sq1)
+			set_bit(&board.pieces[PIECES.r], sq2)
 		}
 	}
 	if decode_is_en_passant(move) > 0{
-		clear_bit(&board.pieces[PIECES.p if board.whitesMove else PIECES.P], uint(to_sqr + 8 * (1 if piece_color == 0 else -1)))
+		clear_bit(&board.pieces[PIECES.p if board.whitesMove else PIECES.P], to_sqr + 8 * (1 if piece_color == 0 else -1))
 	}
 
 	board.castlePerm &= CASTLING_PERM_ON_MOVE[from_sqr]
@@ -308,48 +311,48 @@ undo_move :: proc(board: ^C_Board, move: u64) {
 	from_sqr := decode_from_sqr(move)
 	to_sqr := decode_to_sqr(move)
 
-	set_bit(&board.pieces[piece], uint(from_sqr))
+	set_bit(&board.pieces[piece], from_sqr)
 
 	if decode_promoted_piece(move) > 0 { 
-		clear_bit(&board.pieces[decode_promoted_piece(move)], uint(to_sqr)) 
+		clear_bit(&board.pieces[decode_promoted_piece(move)], to_sqr) 
 	}else { 
-		clear_bit(&board.pieces[piece], uint(to_sqr)) 
+		clear_bit(&board.pieces[piece], to_sqr) 
 	}
 	if decode_is_capture(move) > 0 {
-		set_bit(&board.pieces[decode_target_piece(move)], uint(to_sqr))
+		set_bit(&board.pieces[decode_target_piece(move)], to_sqr)
 	}
 	if decode_is_en_passant(move) > 0{
-		set_bit(&board.pieces[PIECES.p if piece_color == 0 else PIECES.P], uint(to_sqr + 8 * (1 if piece_color == 0 else -1)))
+		set_bit(&board.pieces[PIECES.p if piece_color == 0 else PIECES.P], to_sqr + 8 * (1 if piece_color == 0 else -1))
 	}
 
 	board.whitesMove = !board.whitesMove
 	if decode_is_castling(move) > 0 {
 		// print_single_move(move)
-		sq1, sq2 : uint
+		sq1, sq2 : u8
 		if board.whitesMove{
-			if to_sqr == int(SQUARES.C1) { sq1, sq2 = uint(SQUARES.A1), uint(SQUARES.D1) }
-			else { sq1, sq2 = uint(SQUARES.H1), uint(SQUARES.F1) }
+			if to_sqr == u8(SQUARES.C1) { sq1, sq2 = u8(SQUARES.A1), u8(SQUARES.D1) }
+			else { sq1, sq2 = u8(SQUARES.H1), u8(SQUARES.F1) }
 			set_bit(&board.pieces[int(PIECES.R)], sq1)
 			clear_bit(&board.pieces[int(PIECES.R)], sq2)
 		}else{
-			if to_sqr == int(SQUARES.C8) { sq1, sq2 = uint(SQUARES.A8), uint(SQUARES.D8) }
-			else { sq1, sq2 = uint(SQUARES.H8), uint(SQUARES.F8) }
+			if to_sqr == u8(SQUARES.C8) { sq1, sq2 = u8(SQUARES.A8), u8(SQUARES.D8) }
+			else { sq1, sq2 = u8(SQUARES.H8), u8(SQUARES.F8) }
 			set_bit(&board.pieces[int(PIECES.r)], sq1)
 			clear_bit(&board.pieces[int(PIECES.r)], sq2)
 		}
 	}
 
 	board.fiftyMoves = decode_fifty_moves(move)
-	board.castlePerm = u8(decode_castle_perm(move))
-	board.enPas = uint(decode_en_pas(move))
+	board.castlePerm = decode_castle_perm(move)
+	board.enPas = decode_en_pas(move)
 	board.ply -= 1
 	update_occupied(board)
 }
 
 is_king_in_check :: #force_inline proc(board: ^C_Board, masks: ^C_Attack_masks) -> bool{
+
 	board.whitesMove = !board.whitesMove
-	is_in_check := is_square_attacked(board, masks, uint(ffs(board.pieces[PIECES.K if board.whitesMove else PIECES.k])), (COLOR.BLACK if board.whitesMove else COLOR.WHITE))
-	// fmt.println(SQUARE_TO_CHR[ffs(board.pieces[PIECES.K if board.whitesMove else PIECES.k])], is_in_check)
+	is_in_check := is_square_attacked(board, masks, ffs(board.pieces[PIECES.K if board.whitesMove else PIECES.k]), (COLOR.BLACK if board.whitesMove else COLOR.WHITE))
 	board.whitesMove = !board.whitesMove
 	return is_in_check
 }

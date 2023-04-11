@@ -12,13 +12,13 @@ ON_12_RANK : u64 = 65535;
 ON_78_RANK : u64 = 18446462598732840960;
 
 init_masks :: proc (masks: ^C_Attack_masks){
-    for sqr in 0..<64{
-        masks.pawn[int(COLOR.WHITE)][sqr] = mask_pawn_attacks(COLOR.WHITE, uint(sqr));
-        masks.pawn[int(COLOR.BLACK)][sqr] = mask_pawn_attacks(COLOR.BLACK, uint(sqr));
-        masks.bishop[sqr] = mask_bishop_attacks(uint(sqr));
-        masks.rook[sqr] = mask_rook_attacks(uint(sqr));
-        masks.king[sqr] = mask_king_attacks(uint(sqr));
-        masks.knight[sqr] = mask_knight_attacks(uint(sqr));
+    for sqr : u8 = 0; sqr < 64; sqr += 1{
+        masks.pawn[COLOR.WHITE][sqr] = mask_pawn_attacks(COLOR.WHITE, sqr);
+        masks.pawn[COLOR.BLACK][sqr] = mask_pawn_attacks(COLOR.BLACK, sqr);
+        masks.bishop[sqr] = mask_bishop_attacks(sqr);
+        masks.rook[sqr] = mask_rook_attacks(sqr);
+        masks.king[sqr] = mask_king_attacks(sqr);
+        masks.knight[sqr] = mask_knight_attacks(sqr);
     }
     init_slider_attacks(masks, true);
     init_slider_attacks(masks, false);
@@ -26,28 +26,29 @@ init_masks :: proc (masks: ^C_Attack_masks){
 
 init_slider_attacks :: proc (masks: ^C_Attack_masks, bishop: bool){
     att_mask, occ, magic_index : u64;
-    relevant_bits, occupancy_indicies : int;
+    relevant_bits : uint
+    occupancy_indicies : uint;
 
-    for sqr in 0..<64{
+    for sqr : u8 = 0; sqr < 64; sqr += 1{
         att_mask = bishop ? masks.bishop[sqr] : masks.rook[sqr];
-        relevant_bits = count_bits(att_mask);
-        occupancy_indicies = (1 << uint(relevant_bits));
+        relevant_bits := uint(count_bits(att_mask));
+        occupancy_indicies = (1 << relevant_bits);
 
         for i in 0..<occupancy_indicies{
             if bishop{
                 occ = set_occupancy(i, relevant_bits, att_mask);
-                magic_index = (occ * BISHOP_MAGICS[sqr]) >> uint(64 - RELEVANT_OCCUPANCY_BITS_BISHOP[sqr]);
-                masks.bishop_attacks[sqr][magic_index] = mask_bishop_attacks_on_fly(uint(sqr), &occ);
+                magic_index = (occ * BISHOP_MAGICS[sqr]) >> u64(64 - RELEVANT_OCCUPANCY_BITS_BISHOP[sqr]);
+                masks.bishop_attacks[sqr][magic_index] = mask_bishop_attacks_on_fly(sqr, &occ);
             }else{
                 occ = set_occupancy(i, relevant_bits, att_mask);
-                magic_index = (occ * ROOK_MAGICS[sqr]) >> uint(64 - RELEVANT_OCCUPANCY_BITS_ROOK[sqr]);
-                masks.rook_attacks[sqr][magic_index] = mask_rook_attacks_on_fly(uint(sqr), &occ);
+                magic_index = (occ * ROOK_MAGICS[sqr]) >> u64(64 - RELEVANT_OCCUPANCY_BITS_ROOK[sqr]);
+                masks.rook_attacks[sqr][magic_index] = mask_rook_attacks_on_fly(sqr, &occ);
             }
         }
     }
 }
 
-get_rook_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: uint, occupancy: u64) -> u64 {
+get_rook_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: u8, occupancy: u64) -> u64 {
     occ : u64 = occupancy;
     occ &= masks.rook[sqr];
     occ *= ROOK_MAGICS[sqr]
@@ -55,7 +56,7 @@ get_rook_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: uint, occup
     return masks.rook_attacks[sqr][occ];
 }
 
-get_bishop_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: uint, occupancy: u64) -> u64 {
+get_bishop_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: u8, occupancy: u64) -> u64 {
     occ : u64 = occupancy;
     occ &= masks.bishop[sqr];
     occ *= BISHOP_MAGICS[sqr]
@@ -63,11 +64,11 @@ get_bishop_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: uint, occ
     return masks.bishop_attacks[sqr][occ];
 }
 
-get_queen_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: uint, occupancy: u64) -> u64 {
+get_queen_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: u8, occupancy: u64) -> u64 {
     return get_bishop_attacks(masks, sqr, occupancy) | get_rook_attacks(masks, sqr, occupancy)
 }
 
-mask_pawn_attacks :: proc (color: COLOR, sqr : uint) -> u64{
+mask_pawn_attacks :: proc (color: COLOR, sqr : u8) -> u64{
     bb : u64 = 0;
 
     if color == COLOR.WHITE{
@@ -85,7 +86,7 @@ mask_pawn_attacks :: proc (color: COLOR, sqr : uint) -> u64{
     return bb;
 }
 
-mask_knight_attacks :: proc (sqr: uint) -> u64{
+mask_knight_attacks :: proc (sqr: u8) -> u64{
     bb : u64 = 0;
     
     if get_bit(&ON_8_RANK, sqr) == 0{
@@ -108,37 +109,37 @@ mask_knight_attacks :: proc (sqr: uint) -> u64{
     return bb;
 }
 
-mask_rook_attacks :: proc (sqr: uint) -> u64{
+mask_rook_attacks :: proc (sqr: u8) -> u64{
     bb : u64 = 0;
-    r_ : int = int(sqr / 8);
-    f_ : int = int(sqr % 8);
+    r_ : i8 = i8(sqr / 8);
+    f_ : i8 = i8(sqr % 8);
 
-    for r := r_ + 1; r < 7; r += 1 { set_bit(&bb, FR_2_SQR(f_, r)); }
-    for r := r_ - 1; r > 0; r -= 1 { set_bit(&bb, FR_2_SQR(f_, r)); }
-    for f := f_ + 1; f < 7; f += 1 { set_bit(&bb, FR_2_SQR(f, r_)); }
-    for f := f_ - 1; f > 0; f -= 1 { set_bit(&bb, FR_2_SQR(f, r_)); }
+    for r := r_ + 1; r < 7; r += 1 { set_bit(&bb, FR_2_SQR(u8(f_), u8(r))); }
+    for r := r_ - 1; r > 0; r -= 1 { set_bit(&bb, FR_2_SQR(u8(f_), u8(r))); }
+    for f := f_ + 1; f < 7; f += 1 { set_bit(&bb, FR_2_SQR(u8(f), u8(r_))); }
+    for f := f_ - 1; f > 0; f -= 1 { set_bit(&bb, FR_2_SQR(u8(f), u8(r_))); }
 
     return bb;
 }
 
-mask_bishop_attacks :: proc (sqr: uint) -> u64{
+mask_bishop_attacks :: proc (sqr: u8) -> u64{
     bb : u64 = 0;
-    r_ : int = int(sqr / 8);
-    f_ : int = int(sqr % 8);
+    r_ : i8 = i8(sqr / 8);
+    f_ : i8 = i8(sqr % 8);
 
     f := f_ + 1;
-    for r := r_ + 1; r < 7 && f < 7; r += 1 { set_bit(&bb, FR_2_SQR(f, r)); f += 1; }
+    for r := r_ + 1; r < 7 && f < 7; r += 1 { set_bit(&bb, FR_2_SQR(u8(f), u8(r))); f += 1; }
     f = f_ - 1;
-    for r := r_ + 1; r < 7 && f > 0; r += 1 { set_bit(&bb, FR_2_SQR(f, r)); f -= 1; }
+    for r := r_ + 1; r < 7 && f > 0; r += 1 { set_bit(&bb, FR_2_SQR(u8(f), u8(r))); f -= 1; }
     f = f_ + 1
-    for r := r_ - 1; r > 0 && f < 7; r -= 1 { set_bit(&bb, FR_2_SQR(f, r)); f += 1; }
+    for r := r_ - 1; r > 0 && f < 7; r -= 1 { set_bit(&bb, FR_2_SQR(u8(f), u8(r))); f += 1; }
     f = f_ - 1
-    for r := r_ - 1; r > 0 && f > 0; r -= 1 { set_bit(&bb, FR_2_SQR(f, r)); f -= 1; }
+    for r := r_ - 1; r > 0 && f > 0; r -= 1 { set_bit(&bb, FR_2_SQR(u8(f), u8(r))); f -= 1; }
 
     return bb;
 }
 
-mask_king_attacks :: proc (sqr : uint) -> u64{
+mask_king_attacks :: proc (sqr : u8) -> u64{
     bb : u64 = 0;
 
     if get_bit(&ON_A_FILE, sqr) == 0{
@@ -155,32 +156,32 @@ mask_king_attacks :: proc (sqr : uint) -> u64{
     return bb;
 }
 
-mask_rook_attacks_on_fly :: proc (sqr: uint, occ: ^u64) -> u64{
+mask_rook_attacks_on_fly :: proc (sqr: u8, occ: ^u64) -> u64{
     bb : u64 = 0;
-    r_ : int = int(sqr / 8);
-    f_ : int = int(sqr % 8);
+    r_ : i8 = i8(sqr / 8);
+    f_ : i8 = i8(sqr % 8);
 
-    for r := r_ + 1; r < 8; r += 1  { set_bit(&bb, FR_2_SQR(f_, r)); if get_bit(occ, FR_2_SQR(f_, r)) != 0 do break;}
-    for r := r_ - 1; r > -1; r -= 1 { set_bit(&bb, FR_2_SQR(f_, r)); if get_bit(occ, FR_2_SQR(f_, r)) != 0 do break;}
-    for f := f_ + 1; f < 8; f += 1  { set_bit(&bb, FR_2_SQR(f, r_)); if get_bit(occ, FR_2_SQR(f, r_)) != 0 do break;}
-    for f := f_ - 1; f > -1; f -= 1 { set_bit(&bb, FR_2_SQR(f, r_)); if get_bit(occ, FR_2_SQR(f, r_)) != 0 do break;}
+    for r := r_ + 1; r < 8; r += 1  { set_bit(&bb, FR_2_SQR(u8(f_), u8(r))); if get_bit(occ, FR_2_SQR(u8(f_), u8(r))) != 0 do break;}
+    for r := r_ - 1; r > -1; r -= 1 { set_bit(&bb, FR_2_SQR(u8(f_), u8(r))); if get_bit(occ, FR_2_SQR(u8(f_), u8(r))) != 0 do break;}
+    for f := f_ + 1; f < 8; f += 1  { set_bit(&bb, FR_2_SQR(u8(f), u8(r_))); if get_bit(occ, FR_2_SQR(u8(f), u8(r_))) != 0 do break;}
+    for f := f_ - 1; f > -1; f -= 1 { set_bit(&bb, FR_2_SQR(u8(f), u8(r_))); if get_bit(occ, FR_2_SQR(u8(f), u8(r_))) != 0 do break;}
 
     return bb;
 }
 
-mask_bishop_attacks_on_fly :: proc (sqr: uint, occ: ^u64) -> u64{
+mask_bishop_attacks_on_fly :: proc (sqr: u8, occ: ^u64) -> u64{
     bb : u64 = 0;
-    r_ : int = int(sqr / 8);
-    f_ : int = int(sqr % 8);
+    r_ : i8 = i8(sqr / 8);
+    f_ : i8 = i8(sqr % 8);
 
     f := f_ + 1;
-    for r := r_ + 1; r < 8 && f < 8; r += 1 { set_bit(&bb, FR_2_SQR(f, r)); if get_bit(occ, FR_2_SQR(f, r)) != 0 do break; f += 1; }
+    for r := r_ + 1; r < 8 && f < 8; r += 1 { set_bit(&bb, FR_2_SQR(u8(f), u8(r))); if get_bit(occ, FR_2_SQR(u8(f), u8(r))) != 0 do break; f += 1; }
     f = f_ - 1;
-    for r := r_ + 1; r < 8 && f > -1; r += 1 { set_bit(&bb, FR_2_SQR(f, r)); if get_bit(occ, FR_2_SQR(f, r)) != 0 do break; f -= 1; }
+    for r := r_ + 1; r < 8 && f > -1; r += 1 { set_bit(&bb, FR_2_SQR(u8(f), u8(r))); if get_bit(occ, FR_2_SQR(u8(f), u8(r))) != 0 do break; f -= 1; }
     f = f_ + 1
-    for r := r_ - 1; r > -1 && f < 8; r -= 1 { set_bit(&bb, FR_2_SQR(f, r)); if get_bit(occ, FR_2_SQR(f, r)) != 0 do break; f += 1; }
+    for r := r_ - 1; r > -1 && f < 8; r -= 1 { set_bit(&bb, FR_2_SQR(u8(f), u8(r))); if get_bit(occ, FR_2_SQR(u8(f), u8(r))) != 0 do break; f += 1; }
     f = f_ - 1
-    for r := r_ - 1; r > -1 && f > -1; r -= 1 { set_bit(&bb, FR_2_SQR(f, r)); if get_bit(occ, FR_2_SQR(f, r)) != 0 do break; f -= 1; }
+    for r := r_ - 1; r > -1 && f > -1; r -= 1 { set_bit(&bb, FR_2_SQR(u8(f), u8(r))); if get_bit(occ, FR_2_SQR(u8(f), u8(r))) != 0 do break; f -= 1; }
 
     return bb;
 }
