@@ -1,0 +1,1 @@
+odin build . -o:speed -no-bounds-check --microarch:native

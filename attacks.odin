@@ -11,7 +11,7 @@ ON_1_RANK : u64 = 255;
 ON_12_RANK : u64 = 65535;
 ON_78_RANK : u64 = 18446462598732840960;
 
-init_masks :: proc (masks: ^C_Attack_masks){
+init_masks :: proc (masks: ^S_Attack_masks){
     for sqr : u8 = 0; sqr < 64; sqr += 1{
         masks.pawn[COLOR.WHITE][sqr] = mask_pawn_attacks(COLOR.WHITE, sqr);
         masks.pawn[COLOR.BLACK][sqr] = mask_pawn_attacks(COLOR.BLACK, sqr);
@@ -24,7 +24,7 @@ init_masks :: proc (masks: ^C_Attack_masks){
     init_slider_attacks(masks, false);
 }
 
-init_slider_attacks :: proc (masks: ^C_Attack_masks, bishop: bool){
+init_slider_attacks :: proc (masks: ^S_Attack_masks, bishop: bool){
     att_mask, occ, magic_index : u64;
     relevant_bits : uint
     occupancy_indicies : uint;
@@ -48,7 +48,7 @@ init_slider_attacks :: proc (masks: ^C_Attack_masks, bishop: bool){
     }
 }
 
-get_rook_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: u8, occupancy: u64) -> u64 {
+get_rook_attacks :: #force_inline proc (masks: ^S_Attack_masks, sqr: u8, occupancy: u64) -> u64 {
     occ : u64 = occupancy;
     occ &= masks.rook[sqr];
     occ *= ROOK_MAGICS[sqr]
@@ -56,7 +56,7 @@ get_rook_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: u8, occupan
     return masks.rook_attacks[sqr][occ];
 }
 
-get_bishop_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: u8, occupancy: u64) -> u64 {
+get_bishop_attacks :: #force_inline proc (masks: ^S_Attack_masks, sqr: u8, occupancy: u64) -> u64 {
     occ : u64 = occupancy;
     occ &= masks.bishop[sqr];
     occ *= BISHOP_MAGICS[sqr]
@@ -64,7 +64,7 @@ get_bishop_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: u8, occup
     return masks.bishop_attacks[sqr][occ];
 }
 
-get_queen_attacks :: #force_inline proc (masks: ^C_Attack_masks, sqr: u8, occupancy: u64) -> u64 {
+get_queen_attacks :: #force_inline proc (masks: ^S_Attack_masks, sqr: u8, occupancy: u64) -> u64 {
     return get_bishop_attacks(masks, sqr, occupancy) | get_rook_attacks(masks, sqr, occupancy)
 }
 

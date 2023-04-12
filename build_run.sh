@@ -1,0 +1,1 @@
+odin run . -o:speed -no-bounds-check --microarch:native

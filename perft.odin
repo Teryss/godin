@@ -4,7 +4,7 @@ import "core:fmt"
 import "core:time"
 
 @(private)
-perft_debug :: proc (board: ^C_Board, masks: ^C_Attack_masks, depth : int) -> u64{
+perft_debug :: proc (board: ^S_Board, masks: ^S_Attack_masks, depth : int) -> u64{
 	fmt.printf("Perf test at depth %d \n----------------------\n", depth)
 	nodes : u64 = 0
 	moves : [256]u64
@@ -31,7 +31,7 @@ perft_debug :: proc (board: ^C_Board, masks: ^C_Attack_masks, depth : int) -> u6
 }
 
 @(private)
-perft :: proc (board: ^C_Board, masks: ^C_Attack_masks, depth : int) -> u64 {
+perft :: proc (board: ^S_Board, masks: ^S_Attack_masks, depth : int) -> u64 {
 	if depth == 0 { return 1 }
 	nodes : u64 = 0
 	moves : [256]u64
@@ -46,7 +46,7 @@ perft :: proc (board: ^C_Board, masks: ^C_Attack_masks, depth : int) -> u64 {
 	return nodes
 }
 
-run_perft :: proc (board: ^C_Board, masks: ^C_Attack_masks, depth : int, debug : bool){
+run_perft :: proc (board: ^S_Board, masks: ^S_Attack_masks, depth : int, debug : bool){
 	nodes : u64
 	t1 := time.tick_now()
 	if debug {

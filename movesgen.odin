@@ -3,7 +3,7 @@ package main
 
 UP :: 8;
 
-is_square_attacked :: #force_inline proc (board: ^C_Board, masks: ^C_Attack_masks, sqr: u8, by_side: COLOR) -> bool{
+is_square_attacked :: #force_inline proc (board: ^S_Board, masks: ^S_Attack_masks, sqr: u8, by_side: COLOR) -> bool{
 	using COLOR;
 	using PIECES;	
 	if by_side == WHITE && (masks.pawn[BLACK][sqr] & board.pieces[P]) > 0 { return true; }
@@ -16,14 +16,14 @@ is_square_attacked :: #force_inline proc (board: ^C_Board, masks: ^C_Attack_mask
 	return false;
 }
 
-add_move :: #force_inline proc(board : ^C_Board, moves_count: ^u8, move: u64, move_list: ^[256]u64){
+add_move :: #force_inline proc(board : ^S_Board, moves_count: ^u8, move: u64, move_list: ^[256]u64){
 	move_list[moves_count^] = add_info_to_encoded_move(board, move);
 	moves_count^ += 1;
 }
 
 import "core:fmt"
 
-generate_pseudo_moves :: proc(board: ^C_Board, masks: ^C_Attack_masks, move_list: ^[256]u64) -> u8 #no_bounds_check{
+generate_pseudo_moves :: proc(board: ^S_Board, masks: ^S_Attack_masks, move_list: ^[256]u64) -> u8 #no_bounds_check{
 	using PIECES;
 	using SQUARES;
 	
@@ -221,7 +221,7 @@ generate_pseudo_moves :: proc(board: ^C_Board, masks: ^C_Attack_masks, move_list
 	return moves_count
 }
 
-get_target_piece :: #force_inline proc (borad: ^C_Board, to_sqr : u8) -> u8{
+get_target_piece :: #force_inline proc (borad: ^S_Board, to_sqr : u8) -> u8{
 	for i : u8 = 0; i < 12; i+=1{
 		if get_bit(&borad.pieces[i], to_sqr) > 0{
 			return i;
@@ -236,7 +236,7 @@ enocode_move :: #force_inline proc (from_sqr, to_sqr, piece, promoted_piece, is_
 	return (u64(from_sqr) | u64(to_sqr) << 6 | u64(piece) << 12 | u64(promoted_piece) << 16 | u64(is_capture) << 20 | u64(is_double_push) << 21 | u64(is_en_passant) << 22 | u64(is_castling)  << 23); 
 }
 
-add_info_to_encoded_move :: #force_inline proc (board: ^C_Board, move: u64) -> u64 { 
+add_info_to_encoded_move :: #force_inline proc (board: ^S_Board, move: u64) -> u64 { 
 	return (move | u64(board.enPas) << 24 | u64(board.castlePerm) << 32 | u64(board.fiftyMoves) << 38 | u64((decode_is_capture(move) > 0 ? get_target_piece(board, decode_to_sqr(move)) : 0)) << 44)
 }
 
@@ -257,8 +257,8 @@ decode_castle_perm :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x
 decode_fifty_moves :: #force_inline proc (move: u64) -> u8 { return u8(move & 0xFC000000000 >> 38) }
 decode_target_piece :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x3F00000000000 >> 44); }
 
-make_move :: proc(board: ^C_Board, move: u64){
-	board.moveHistory[board.ply] = move
+make_move :: proc(board: ^S_Board, move: u64){
+	// board.moveHistory[board.ply] = move
 	piece := decode_piece(move);
 	piece_color := board.whitesMove ? int(COLOR.WHITE) : int(COLOR.BLACK)
 	from_sqr := u8(decode_from_sqr(move));
@@ -305,7 +305,7 @@ make_move :: proc(board: ^C_Board, move: u64){
 	update_occupied(board)
 }
 
-undo_move :: proc(board: ^C_Board, move: u64) {
+undo_move :: proc(board: ^S_Board, move: u64) {
 	piece_color := board.whitesMove ? int(COLOR.BLACK) : int(COLOR.WHITE)
 	piece := decode_piece(move)
 	from_sqr := decode_from_sqr(move)
@@ -349,7 +349,7 @@ undo_move :: proc(board: ^C_Board, move: u64) {
 	update_occupied(board)
 }
 
-is_king_in_check :: #force_inline proc(board: ^C_Board, masks: ^C_Attack_masks) -> bool{
+is_king_in_check :: #force_inline proc(board: ^S_Board, masks: ^S_Attack_masks) -> bool{
 
 	board.whitesMove = !board.whitesMove
 	is_in_check := is_square_attacked(board, masks, ffs(board.pieces[PIECES.K if board.whitesMove else PIECES.k]), (COLOR.BLACK if board.whitesMove else COLOR.WHITE))
