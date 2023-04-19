@@ -1,15 +1,12 @@
 package main
 
 import "core:fmt"
-// import "core:bufio"
 import "core:os"
-// import "core:io"
 
 buf: [256]u8
 
 read_input :: proc () -> string {
     bytes_read, ok := os.read(os.stdin, buf[:])
-    // fmt.println(bytes_read)
     return string(buf[:bytes_read])
 }
 
@@ -23,9 +20,6 @@ parse_move :: proc (game : ^S_Game input: string) -> u64{
     from_sqr : u8 = FR_2_SQR(move_string[0] - u8('a'), u8('8') - move_string[1])
     to_sqr : u8 = FR_2_SQR(move_string[2] - u8('a'), u8('8') - move_string[3])
     promoted_piece : u8 = 0
-
-    // fmt.println("Original string:", input[:5])
-    // fmt.println(from_sqr, "->", SQUARE_TO_CHR[from_sqr], to_sqr, "->", SQUARE_TO_CHR[to_sqr])
 
     for i in 0..<move_count{
         if decode_from_sqr(moves[i]) == from_sqr{
