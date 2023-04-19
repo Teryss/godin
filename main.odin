@@ -2,32 +2,25 @@ package main
 
 import "core:fmt"
 
-init_all :: proc (board: ^S_Board, masks: ^S_Attack_masks, FEN : string){
-	init_masks(masks)
+init_all :: proc (game : ^S_Game, FEN : string){
+	init_masks(game.masks)
 	init_random_numbers()
-	load_fen(board, FEN)
+	load_fen(game.board, FEN)
 }
 
 main :: proc() {
-	board := new(S_Board)
-	masks := new(S_Attack_masks)
-	defer free(board)
-	defer free(masks)
+	game : S_Game = { new(S_Board), new(S_Attack_masks) }
+	defer free(game.board)
+	defer free(game.masks)
+	init_all(&game, TRICKY_POSITION)
 
-
-	init_all(board, masks, TRICKY_POSITION)
-	print_board(board)
+	print_board(game.board)
 
 	best_move : u64
 	score : i32
-	best_move, score = search(board, masks, 6)
-	fmt.println("Results:\n")
+	best_move, score = search(game.board, game.masks, 9)
+	fmt.println("Results:")
 	fmt.println("Nodes:", nodes_searched)
 	print_single_move(best_move)
 	fmt.println("Score:", score)
-
-	// print_board(board)
-	// fmt.println(int(SQUARES.NO_SQR), u8(SQUARES.NO_SQR), u8(SQUARES.A8))
-	// run_perft(board, masks, 5, false)
-	// print_bitboard(board.pieces[PIECES.P])
 }

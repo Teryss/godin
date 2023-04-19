@@ -10,19 +10,13 @@ perft_debug :: proc (board: ^S_Board, masks: ^S_Attack_masks, depth : int) -> u6
 	moves : [256]u64
 	moves_count : u8 = generate_pseudo_moves(board, masks, &moves)
 	nodes_now : u64 = 0
-	print_moves(&moves, moves_count)
 	for i in 0..<moves_count{
 		make_move(board, moves[i])
-		// print_board(board)
 		if !is_king_in_check(board, masks){
 			nodes_now = perft(board, masks, depth - 1)
 			nodes += nodes_now
 		}
-		else{
-			fmt.println("King in check")
-		}
 		undo_move(board, moves[i])
-		// print_board(board)
 		fmt.printf("	%s%s: %d\n", SQUARE_TO_CHR[decode_from_sqr(moves[i])], SQUARE_TO_CHR[decode_to_sqr(moves[i])], nodes_now)
 		nodes_now = 0
 	}

@@ -45,6 +45,11 @@ CASTLING_PERM_ON_MOVE : [64]u8 = {
 	13, 15, 15, 15, 12, 15, 15, 14,
 }
 
+S_Game :: struct {
+	board : ^S_Board,
+	masks : ^S_Attack_masks,
+}
+
 S_Board :: struct {
 	pieces : [12]u64,
 	occupied : [3]u64,
@@ -107,6 +112,7 @@ u8_piece_to_int :: proc (piece: u8) -> int{
 load_fen :: proc(board: ^S_Board, fen: string){
 	fen_split : [6]string;
 	temp : [dynamic]u8;
+	defer delete(temp)
 	space_ascii : u8 = 32;
 	counter : int = 0;
 

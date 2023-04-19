@@ -1,6 +1,5 @@
 package main
 
-
 UP :: 8;
 
 is_square_attacked :: #force_inline proc (board: ^S_Board, masks: ^S_Attack_masks, sqr: u8, by_side: COLOR) -> bool{
@@ -16,12 +15,51 @@ is_square_attacked :: #force_inline proc (board: ^S_Board, masks: ^S_Attack_mask
 	return false;
 }
 
-add_move :: #force_inline proc(board : ^S_Board, moves_count: ^u8, move: u64, move_list: ^[256]u64){
+is_king_in_check :: #force_inline proc(board: ^S_Board, masks: ^S_Attack_masks) -> bool{
+	board.whitesMove = !board.whitesMove
+	is_in_check := is_square_attacked(board, masks, ffs(board.pieces[PIECES.K if board.whitesMove else PIECES.k]), (COLOR.BLACK if board.whitesMove else COLOR.WHITE))
+	board.whitesMove = !board.whitesMove
+	return is_in_check
+}
+
+get_target_piece :: #force_inline proc (borad: ^S_Board, to_sqr : u8) -> u8{
+	for i : u8 = 0; i < 12; i+=1{
+		if get_bit(&borad.pieces[i], to_sqr) > 0{
+			return i;
+		}
+	}
+	return 15;
+}
+
+add_move :: #force_inline proc(board: ^S_Board, moves_count: ^u8, move: u64, move_list: ^[256]u64){
 	move_list[moves_count^] = add_info_to_encoded_move(board, move);
 	moves_count^ += 1;
 }
 
-import "core:fmt"
+enocode_move :: #force_inline proc (from_sqr, to_sqr, piece, promoted_piece, is_capture, is_double_push, is_en_passant, is_castling: u8) -> u64{
+	return (u64(from_sqr) | u64(to_sqr) << 6 | u64(piece) << 12 | u64(promoted_piece) << 16 | u64(is_capture) << 20 | u64(is_double_push) << 21 | u64(is_en_passant) << 22 | u64(is_castling)  << 23); 
+}
+
+add_info_to_encoded_move :: #force_inline proc (board: ^S_Board, move: u64) -> u64 { 
+	return (move | u64(board.enPas) << 24 | u64(board.castlePerm) << 32 | u64(board.fiftyMoves) << 38 | u64((decode_is_capture(move) > 0 ? get_target_piece(board, decode_to_sqr(move)) : 0)) << 44)
+}
+
+decode_move :: #force_inline proc (move: u64) -> (u8, u8, u8, u8, u8, u8, u8, u8){
+	return u8(move & 0x3f), u8(move & 0xfc0 >> 6), u8(move & 0xf000 >> 12), u8(move & 0xf0000 >> 16), u8(move & 0x100000 >> 20), u8(move & 0x200000 >> 21), u8(move & 0x400000 >> 22), u8(move & 0x800000 >> 23)
+}
+
+decode_from_sqr :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x3f); }
+decode_to_sqr :: #force_inline proc (move: u64) -> u8 { return u8(move & 0xfc0 >> 6); }
+decode_piece :: #force_inline proc (move: u64) -> u8 { return u8(move & 0xf000 >> 12); }
+decode_promoted_piece :: #force_inline proc (move: u64) -> u8 { return u8(move & 0xf0000 >> 16); }
+decode_is_capture :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x100000 >> 20); }
+decode_is_double_push :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x200000 >> 21); }
+decode_is_en_passant :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x400000 >> 22); }
+decode_is_castling :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x800000 >> 23); }
+decode_en_pas :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x7F000000 >> 24); }
+decode_castle_perm :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x3F00000000 >> 32) }
+decode_fifty_moves :: #force_inline proc (move: u64) -> u8 { return u8(move & 0xFC000000000 >> 38) }
+decode_target_piece :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x3F00000000000 >> 44); }
 
 generate_pseudo_moves :: proc(board: ^S_Board, masks: ^S_Attack_masks, move_list: ^[256]u64) -> u8 #no_bounds_check{
 	using PIECES;
@@ -221,42 +259,6 @@ generate_pseudo_moves :: proc(board: ^S_Board, masks: ^S_Attack_masks, move_list
 	return moves_count
 }
 
-get_target_piece :: #force_inline proc (borad: ^S_Board, to_sqr : u8) -> u8{
-	for i : u8 = 0; i < 12; i+=1{
-		if get_bit(&borad.pieces[i], to_sqr) > 0{
-			return i;
-		}
-	}
-	return 15;
-}
-
-enocode_move :: #force_inline proc (from_sqr, to_sqr, piece, promoted_piece, is_capture, is_double_push, is_en_passant, is_castling: u8) -> u64{
-	// fmt.println("Original:", from_sqr, to_sqr, piece, promoted_piece, is_capture, is_double_push, is_en_passant, is_castling)
-	// fmt.println("After encoding:", decode_move(u64(from_sqr) | u64(to_sqr) << 6 | u64(piece) << 12 | u64(promoted_piece) << 16 | u64(is_capture) << 20 | u64(is_double_push) << 21 | u64(is_en_passant) << 22 | u64(is_castling)  << 23))
-	return (u64(from_sqr) | u64(to_sqr) << 6 | u64(piece) << 12 | u64(promoted_piece) << 16 | u64(is_capture) << 20 | u64(is_double_push) << 21 | u64(is_en_passant) << 22 | u64(is_castling)  << 23); 
-}
-
-add_info_to_encoded_move :: #force_inline proc (board: ^S_Board, move: u64) -> u64 { 
-	return (move | u64(board.enPas) << 24 | u64(board.castlePerm) << 32 | u64(board.fiftyMoves) << 38 | u64((decode_is_capture(move) > 0 ? get_target_piece(board, decode_to_sqr(move)) : 0)) << 44)
-}
-
-decode_move :: #force_inline proc (move: u64) -> (u8, u8, u8, u8, u8, u8, u8, u8){
-	return u8(move & 0x3f), u8(move & 0xfc0 >> 6), u8(move & 0xf000 >> 12), u8(move & 0xf0000 >> 16), u8(move & 0x100000 >> 20), u8(move & 0x200000 >> 21), u8(move & 0x400000 >> 22), u8(move & 0x800000 >> 23)
-}
-
-decode_from_sqr :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x3f); }
-decode_to_sqr :: #force_inline proc (move: u64) -> u8 { return u8(move & 0xfc0 >> 6); }
-decode_piece :: #force_inline proc (move: u64) -> u8 { return u8(move & 0xf000 >> 12); }
-decode_promoted_piece :: #force_inline proc (move: u64) -> u8 { return u8(move & 0xf0000 >> 16); }
-decode_is_capture :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x100000 >> 20); }
-decode_is_double_push :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x200000 >> 21); }
-decode_is_en_passant :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x400000 >> 22); }
-decode_is_castling :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x800000 >> 23); }
-decode_en_pas :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x7F000000 >> 24); }
-decode_castle_perm :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x3F00000000 >> 32) }
-decode_fifty_moves :: #force_inline proc (move: u64) -> u8 { return u8(move & 0xFC000000000 >> 38) }
-decode_target_piece :: #force_inline proc (move: u64) -> u8 { return u8(move & 0x3F00000000000 >> 44); }
-
 make_move :: proc(board: ^S_Board, move: u64){
 	// board.moveHistory[board.ply] = move
 	piece := decode_piece(move);
@@ -327,7 +329,6 @@ undo_move :: proc(board: ^S_Board, move: u64) {
 
 	board.whitesMove = !board.whitesMove
 	if decode_is_castling(move) > 0 {
-		// print_single_move(move)
 		sq1, sq2 : u8
 		if board.whitesMove{
 			if to_sqr == u8(SQUARES.C1) { sq1, sq2 = u8(SQUARES.A1), u8(SQUARES.D1) }
@@ -347,12 +348,4 @@ undo_move :: proc(board: ^S_Board, move: u64) {
 	board.enPas = decode_en_pas(move)
 	board.ply -= 1
 	update_occupied(board)
-}
-
-is_king_in_check :: #force_inline proc(board: ^S_Board, masks: ^S_Attack_masks) -> bool{
-
-	board.whitesMove = !board.whitesMove
-	is_in_check := is_square_attacked(board, masks, ffs(board.pieces[PIECES.K if board.whitesMove else PIECES.k]), (COLOR.BLACK if board.whitesMove else COLOR.WHITE))
-	board.whitesMove = !board.whitesMove
-	return is_in_check
 }
