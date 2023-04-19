@@ -14,11 +14,11 @@ main :: proc() {
 	defer free(game.masks)
 	init_all(&game, TRICKY_POSITION)
 
-	print_board(game.board)
+	// print_board(game.board)
 
 	best_move : u64
 	score : i32
-	best_move, score = search(game.board, game.masks, 9)
+	best_move, score = search(game.board, game.masks, 7)
 	fmt.println("Results:")
 	fmt.println("Nodes:", nodes_searched)
 	print_single_move(best_move)

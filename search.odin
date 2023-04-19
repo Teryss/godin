@@ -48,8 +48,8 @@ sort_moves :: proc (moves : ^[256]u64, moves_count : u8){
     move_scores : [256]i32
     score_moves(&move_scores, moves, moves_count)
 
-    for i in 0..<moves_count{
-        for j in 0..<moves_count{
+    for i in 1..<moves_count{
+        for j in 1..<moves_count{
             if move_scores[i] > move_scores[j]{
                 temp_move = moves[i]
                 moves[i] = moves[j]
@@ -126,7 +126,7 @@ quiescence :: proc (board: ^S_Board, masks: ^S_Attack_masks, alpha: i32, beta: i
     score : i32 = MINUS_INFINITY
     moves : [256]u64
     moves_count := generate_pseudo_moves(board, masks, &moves)
-    sort_moves(&moves, moves_count)
+    // sort_moves(&moves, moves_count)
 
     for i in 0..<moves_count{
         if decode_is_capture(moves[i]) > 0{
