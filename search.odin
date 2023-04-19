@@ -32,36 +32,98 @@ init_random_numbers :: proc(){
     }
 }
 
-score_moves :: proc (scores: ^[256]i32, moves : ^[256]u64, moves_count : u8){
-    for i in 0..<moves_count{
-        if decode_is_capture(moves[i]) > 0{
-            scores[i] = mvv_lva[decode_piece(moves[i]) * ATTACKER_MULTIPLIER + decode_target_piece(moves[i])]
-        }else{
-            scores[i] = 0
-        }
-    }
+S_Score :: struct{
+    score : i32,
+    move_index : u8,
 }
 
+move_scores : [256]S_Score
+temp_score : S_Score
+temp_move : u64
+scores_count : u8
+
 sort_moves :: proc (moves : ^[256]u64, moves_count : u8){
-    temp_move : u64
-    temp_score : i32
-    move_scores : [256]i32
-    score_moves(&move_scores, moves, moves_count)
+    temp_move = 0
+    scores_count = 0
 
-    for i in 1..<moves_count{
-        for j in 1..<moves_count{
-            if move_scores[i] > move_scores[j]{
-                temp_move = moves[i]
-                moves[i] = moves[j]
-                moves[j] = temp_move
-
+    // score moves that are captures
+    for i in 0..<moves_count{
+        if decode_is_capture(moves[i]) > 0{
+            move_scores[scores_count] = {
+                mvv_lva[decode_piece(moves[i]) * ATTACKER_MULTIPLIER + decode_target_piece(moves[i])],
+                u8(i),
+            }
+            scores_count += 1
+        }
+    }
+    // sort them (bubble sort)
+    for i in 0..<scores_count{
+        for j in 0..<scores_count{
+            if move_scores[i].score > move_scores[j].score{
                 temp_score = move_scores[i]
                 move_scores[i] = move_scores[j]
                 move_scores[j] = temp_score
+            }    
+        }
+    }
+    // make them "earliest" in movelist
+    for i in 0..<scores_count{
+        temp_move = moves[i]
+        moves[i] = moves[move_scores[i].move_index]
+        moves[move_scores[i].move_index] = temp_move
+    }
+
+    if (0 == 0){
+        fmt.println("------------- SORTED MOVE LIST -------------")
+        for i in 0..<moves_count{
+            if decode_is_capture(moves[i]) > 0{
+                fmt.println(mvv_lva[decode_piece(moves[i]) * ATTACKER_MULTIPLIER + decode_target_piece(moves[i])])
             }
+            else {
+                fmt.println(0)
+            }
+        }
+        fmt.println("------------- SORTED MOVE_SCORES LIST -------------")
+        for i in 0..<scores_count{
+            fmt.println(move_scores[i].score)
         }
     }
 }
+
+// score_moves :: #force_inline proc (scores: ^[256]i32, moves : ^[256]u64, moves_count : u8){
+//     for i in 0..<moves_count{
+//         if decode_is_capture(moves[i]) > 0{
+//             scores[i] = mvv_lva[decode_piece(moves[i]) * ATTACKER_MULTIPLIER + decode_target_piece(moves[i])]
+//         }else{
+//             scores[i] = 0
+//         }
+//     }
+// }
+
+// move_scores : [256]i32
+// sort_moves :: proc (moves : ^[256]u64, moves_count : u8){
+//     temp_move : u64
+//     temp_score : i32
+//     score_moves(&move_scores, moves, moves_count)
+//     // fmt.println(move_scores)
+
+//     for i in 0..<moves_count{
+//         if move_scores[i] > 0{
+//             for j in 0..<moves_count{
+//                 if move_scores[j] == 0 || move_scores[i] > move_scores[j]{
+//                     temp_move = moves[i]
+//                     moves[i] = moves[j]
+//                     moves[j] = temp_move
+    
+//                     temp_score = move_scores[i]
+//                     move_scores[i] = move_scores[j]
+//                     move_scores[j] = temp_score
+//                 }
+//             }
+//         }
+//     }
+//     // fmt.println(move_scores)
+// }
 
 search :: proc (board : ^S_Board, masks: ^S_Attack_masks, depth : int) -> (u64, i32) {
     t1 := time.tick_now()
@@ -85,13 +147,13 @@ search :: proc (board : ^S_Board, masks: ^S_Attack_masks, depth : int) -> (u64, 
     }
 
     t2 := time.tick_now()
-    fmt.println("Search took:", time.duration_milliseconds(time.tick_diff(t1, t2)), "ms")
+    fmt.println("Search took:", time.duration_milliseconds(time.tick_diff(t1, t2)), "ms,", time.duration_seconds(time.tick_diff(t1, t2)), "s")
     return best_move, max_score
 }
 
 alphabeta :: proc (board: ^S_Board, masks: ^S_Attack_masks, alpha: i32, beta: i32, depth: int) -> i32{
-    // if (depth == 0) do return eval(board)
-    if (depth == 0) { return quiescence(board, masks, alpha, beta) }
+    if (depth == 0) do return eval(board)
+    // if (depth == 0) { return quiescence(board, masks, alpha, beta) }
     _alpha, _beta := alpha, beta
     score : i32 = MINUS_INFINITY
     moves : [256]u64
@@ -119,14 +181,14 @@ alphabeta :: proc (board: ^S_Board, masks: ^S_Attack_masks, alpha: i32, beta: i3
 quiescence :: proc (board: ^S_Board, masks: ^S_Attack_masks, alpha: i32, beta: i32) -> i32 {
     current_eval : i32 = eval(board)
     _alpha, _beta := alpha, beta
-    if board.ply == 10 do return current_eval
+    if board.ply == DEPTH + 4 do return current_eval
     if current_eval >= _beta { return _beta }
     if current_eval > _alpha { _alpha = current_eval}
     
     score : i32 = MINUS_INFINITY
     moves : [256]u64
     moves_count := generate_pseudo_moves(board, masks, &moves)
-    // sort_moves(&moves, moves_count)
+    sort_moves(&moves, moves_count)
 
     for i in 0..<moves_count{
         if decode_is_capture(moves[i]) > 0{
