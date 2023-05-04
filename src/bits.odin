@@ -1,7 +1,6 @@
 package main
 
 import "core:intrinsics"
-// import "core:simd/x86"
 
 set_bit :: #force_inline proc(bitboard: ^u64, n: u8) {
 	bitboard^ |= 1 << n;

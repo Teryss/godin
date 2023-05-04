@@ -2,55 +2,6 @@ package main
 
 import "core:fmt"
 
-STARTING_POS :: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-EMPTY_BOARD :: "8/8/8/8/8/8/8/8 b - - "
-TRICKY_POSITION :: "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
-KILLER_POSITION :: "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1"
-CMK_POSITION :: "r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9"
-REPETITIONS :: "2r3k1/R7/8/1R6/8/8/P4KPP/8 w - - 0 40"
-POS_3 :: "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
-MAX_PLY :: 2048
-
-SQUARES :: enum u8{
-	A8 = 0, B8, C8, D8, E8, F8, G8, H8,
-	A7	  , B7, C7, D7, E7, F7, G7, H7,
-	A6	  , B6, C6, D6, E6, F6, G6, H6,
-	A5	  , B5, C5, D5, E5, F5, G5, H5,
-	A4	  , B4, C4, D4, E4, F4, G4, H4,
-	A3	  , B3, C3, D3, E3, F3, G3, H3,
-	A2	  , B2, C2, D2, E2, F2, G2, H2,
-	A1	  , B1, C1, D1, E1, F1, G1, H1, NO_SQR = 64,
-};
-SQUARE_TO_CHR : [65]string = {
-	"a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
-	"a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-	"a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-	"a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-	"a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-	"a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-	"a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-	"a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1", "NO_SQR",
-};
-COLOR :: enum { WHITE, BLACK, BOTH };
-CASTLING :: enum { K = 1, Q = 2, k = 4, q = 8 };
-PIECES :: enum u8 { p = 0, n, b, r, q, k, P, N, B, R, Q, K };
-PIECES_CHR : string = "pnbrqkPNBRQK";
-CASTLING_PERM_ON_MOVE : [64]u8 = {
-	 7, 15, 15, 15,  3, 15, 15, 11,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	13, 15, 15, 15, 12, 15, 15, 14,
-}
-
-S_Game :: struct {
-	board : ^S_Board,
-	masks : ^S_Attack_masks,
-}
-
 S_Board :: struct {
 	pieces : [12]u64,
 	occupied : [3]u64,
@@ -64,25 +15,6 @@ S_Board :: struct {
 	killer_moves: [2][MAX_PLY]u64,
 };
 
-S_Attack_masks :: struct{
-    pawn : [2][64]u64,
-	knight : [64]u64,
-	bishop : [64]u64,
-	king : [64]u64,
-	rook : [64]u64,
-	rook_attacks : [64][4096]u64,
-	bishop_attacks : [64][512]u64,
-};
-
-S_Moves :: struct{
-	movelist: [256]u64,
-	count: u64,
-}
-
-FR_2_SQR :: #force_inline proc(f, r: u8) -> u8{
-	return r * 8 + f;
-}
-
 update_occupied :: #force_inline proc(board: ^S_Board){
 	board.occupied[COLOR.BOTH], board.occupied[COLOR.WHITE], board.occupied[COLOR.BLACK] = 0, 0, 0
     for i in PIECES.p..=PIECES.K{
@@ -90,25 +22,6 @@ update_occupied :: #force_inline proc(board: ^S_Board){
 	    if i >= PIECES.P { board.occupied[COLOR.WHITE] |= board.pieces[i] }
 	    else { board.occupied[COLOR.BLACK] |= board.pieces[i] }
     }
-}
-
-u8_piece_to_int :: proc (piece: u8) -> int{
-	using PIECES
-	switch piece{
-		case u8(80): return int(P);
-		case u8(78): return int(N);
-		case u8(66): return int(B);
-		case u8(82): return int(R);
-		case u8(81): return int(Q);
-		case u8(75): return int(K);
-		case u8(112): return int(p);
-		case u8(110): return int(n);
-		case u8(98): return int(b);
-		case u8(114): return int(r);
-		case u8(113): return int(q);
-		case u8(107): return int(k);
-	}
-	return -10;
 }
 
 load_fen :: proc(board: ^S_Board, fen: string){
@@ -135,7 +48,7 @@ load_fen :: proc(board: ^S_Board, fen: string){
 	sqr : u8 = u8(SQUARES.A8);
 	for i in 0..<len(fen_split[0]){
 		if fen_split[0][i] >= 'A' && fen_split[0][i] <= 'Z' || fen_split[0][i] >= 'a' && fen_split[0][i] <= 'z'{
-			set_bit(&board.pieces[u8_piece_to_int(fen_split[0][i])], sqr);
+			set_bit(&board.pieces[u8_to_piece[fen_split[0][i]]], sqr);
 			sqr += 1;
 		}else if fen_split[0][i] >= '0' && fen_split[0][i] < '9'{
 			sqr += u8(fen_split[0][i]) - u8('0');

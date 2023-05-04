@@ -11,6 +11,17 @@ ON_1_RANK : u64 = 255;
 ON_12_RANK : u64 = 65535;
 ON_78_RANK : u64 = 18446462598732840960;
 
+S_Attack_masks :: struct{
+    pawn : [2][64]u64,
+	knight : [64]u64,
+	bishop : [64]u64,
+	king : [64]u64,
+	rook : [64]u64,
+	rook_attacks : [64][4096]u64,
+	bishop_attacks : [64][512]u64,
+};
+
+
 init_masks :: proc (masks: ^S_Attack_masks){
     for sqr : u8 = 0; sqr < 64; sqr += 1{
         masks.pawn[COLOR.WHITE][sqr] = mask_pawn_attacks(COLOR.WHITE, sqr);

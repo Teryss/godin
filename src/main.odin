@@ -2,6 +2,11 @@ package main
 
 import "core:fmt"
 
+S_Game :: struct {
+	board : ^S_Board,
+	masks : ^S_Attack_masks,
+}
+
 init_all :: proc (game : ^S_Game, FEN : string){
 	init_masks(game.masks)
 	init_random_numbers()
