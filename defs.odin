@@ -9,6 +9,7 @@ KILLER_POSITION :: "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq
 CMK_POSITION :: "r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9"
 REPETITIONS :: "2r3k1/R7/8/1R6/8/8/P4KPP/8 w - - 0 40"
 POS_3 :: "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
+MAX_PLY :: 2048
 
 SQUARES :: enum u8{
 	A8 = 0, B8, C8, D8, E8, F8, G8, H8,
@@ -58,8 +59,9 @@ S_Board :: struct {
 	castlePerm: u8,
 	whitesMove: bool,
 	enPas: u8,
-	// moveHistory: [2048]u64,
-	// moves_count : u8,
+	moveHistory: [12][64]i32,
+	// moves_count : u16,
+	killer_moves: [2][MAX_PLY]u64,
 };
 
 S_Attack_masks :: struct{

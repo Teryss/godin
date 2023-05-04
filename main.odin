@@ -9,23 +9,17 @@ init_all :: proc (game : ^S_Game, FEN : string){
 }
 
 DEPTH :: 7
-SORT_PRINT :: false
+TRANSPOSITION_TABLE_SIZE :: 0
 
 main :: proc() {
 	game : S_Game = { new(S_Board), new(S_Attack_masks) }
 	defer free(game.board)
 	defer free(game.masks)
 	init_all(&game, TRICKY_POSITION)
-
-	test(&game)
+	run(&game)
 }
 
-test :: proc(game : ^S_Game) {
-	// print_board(game.board)
-	// moves : [256]u64
-	// count := generate_pseudo_moves(game.board, game.masks, &moves)
-	// sort_moves(&moves, count)
-	
+run :: proc(game : ^S_Game) {
 	for i in 0..<3{
 		print_board(game.board)
 		best_move, score := search(game.board, game.masks, DEPTH)
@@ -34,10 +28,4 @@ test :: proc(game : ^S_Game) {
 		make_move(game.board, best_move)
 	}
 	print_board(game.board)
-	// print_board(game.board)
-	// best_move, score = search(game.board, game.masks, DEPTH)
-	// print_single_move(best_move)
-	// make_move(game.board, best_move)
-	// fmt.println("Current score:", score)
-	// print_board(game.board)
 }
