@@ -64,11 +64,6 @@ CASTLING_PERM_ON_MOVE : [64]u8 = {
 	13, 15, 15, 15, 12, 15, 15, 14,
 }
 
-S_Moves :: struct{
-	movelist: [256]u64,
-	count: u64,
-}
-
 @(export)
 FR_2_SQR :: #force_inline proc(f, r: u8) -> u8{
 	return r * 8 + f;

@@ -6,6 +6,10 @@ import "core:time"
 MINUS_INFINITY :: -100000000
 INFINITY :: 100000000
 ATTACKER_MULTIPLIER :: 12
+CAPTURE_BONUS :: 10000
+FIRST_KILLER_MOVE_BONUS :: 9000
+SECOND_KILLER_MOVE_BONUS :: 8000
+
 nodes_searched : u64 = 0
 mvv_lva : [144]i32 = {
     105, 205, 305, 405, 505, 605,  105, 205, 305, 405, 505, 605,
@@ -40,20 +44,20 @@ sort_moves :: proc (board: ^S_Board, moves : ^[256]u64, moves_count : u8){
     for i in 0..<moves_count{
         if decode_is_capture(moves[i]) > 0{
             move_scores[scores_count] = {
-                mvv_lva[decode_piece(moves[i]) * ATTACKER_MULTIPLIER + decode_target_piece(moves[i])] + 10000,
+                mvv_lva[decode_piece(moves[i]) * ATTACKER_MULTIPLIER + decode_target_piece(moves[i])] + CAPTURE_BONUS,
                 u8(i),
             }
             scores_count += 1
         }else{
             if board.killer_moves[0][board.ply] == moves[i]{
                 move_scores[scores_count] = {
-                    9000,
+                    FIRST_KILLER_MOVE_BONUS,
                     u8(i),
                 }
                 scores_count += 1
             }else if board.killer_moves[1][board.ply] == moves[i]{
                 move_scores[scores_count] = {
-                    8000,
+                    SECOND_KILLER_MOVE_BONUS,
                     u8(i),
                 }
                 scores_count += 1

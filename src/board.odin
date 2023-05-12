@@ -13,6 +13,7 @@ S_Board :: struct {
 	moveHistory: [12][64]i32,
 	// moves_count : u16,
 	killer_moves: [2][MAX_PLY]u64,
+	pv : ^S_Pv,
 };
 
 update_occupied :: #force_inline proc(board: ^S_Board){

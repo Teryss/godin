@@ -117,19 +117,9 @@ eval :: proc (board: ^S_Board) -> i32{
                 evaluation += PIECES_WEIGHT[piece - 6]
                 evaluation += i32(PIECES_SQR_WEIGHT[piece - 6][sqr])
             }
-            // fmt.println(PIECES_WEIGHT[piece], piece < int(PIECES.P) ? PIECES_SQR_WEIGHT[piece][mirror_score[sqr]] : PIECES_SQR_WEIGHT[piece][sqr])
             clear_bit(&bb, sqr)
         }
-        // fmt.println("eval: ",evaluation)
     }
 
-    // for index in 6..<12{
-    //     // white pieces
-    //     evaluation += i32(count_bits(board.pieces[index - 6 * int(!board.whitesMove)])) * PIECES_WEIGHT[index - 6]
-    //     // black pieces
-    //     evaluation -= i32(count_bits(board.pieces[index - 6 * int(board.whitesMove)])) * PIECES_WEIGHT[index - 6]
-    // }
-    
-    // fmt.println("evaluated position")
     return (evaluation * SIDE_MULTIPLIER[int(board.whitesMove)])
 }
