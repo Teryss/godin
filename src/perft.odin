@@ -40,7 +40,7 @@ perft :: proc (board: ^S_Board, masks: ^S_Attack_masks, depth : int) -> u64 {
 	return nodes
 }
 
-run_perft :: proc (board: ^S_Board, masks: ^S_Attack_masks, depth : int, debug : bool){
+run_perft :: proc (board: ^S_Board, masks: ^S_Attack_masks, depth : int, debug : bool) -> u64{
 	nodes : u64
 	t1 := time.tick_now()
 	if debug {
@@ -49,6 +49,7 @@ run_perft :: proc (board: ^S_Board, masks: ^S_Attack_masks, depth : int, debug :
 		nodes = perft(board, masks, depth)
 	}
 	t2 := time.tick_now()
-	fmt.println("Nodes:", nodes)
-	fmt.println("It took:", time.duration_seconds(time.tick_diff(t1, t2)), "seconds")
+	// fmt.println("Nodes:", nodes)
+	// fmt.println("It took:", time.duration_seconds(time.tick_diff(t1, t2)), "seconds")
+	return nodes
 }

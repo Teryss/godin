@@ -23,8 +23,39 @@ main :: proc() {
 	defer free(game.board)
 	defer free(game.masks)
 	init_all(&game, TRICKY_POSITION)
+
+	// run_test_suite(&game)
+	reset(game.board)
+	load_fen(game.board, TRICKY_POSITION)
 	run(&game)
+	// run(&game)
 	// fmt.println(CONST_INT)
+}
+
+run_test_suite :: proc (game : ^S_Game){
+	nodes : u64
+	expected_nodes : u64 = 193690690
+	reset(game.board)
+	load_fen(game.board, TRICKY_POSITION)
+	nodes = run_perft(game.board, game.masks, 5, false)
+	if nodes != expected_nodes { fmt.printf("Tricky position depth 5 failed, expected: %lld, got: %lld\n", expected_nodes, nodes); return}
+	fmt.println("Tricky positon passed")
+
+	reset(game.board)
+	load_fen(game.board, STARTING_POS)
+	expected_nodes = 119060324
+	nodes = run_perft(game.board, game.masks, 6, false)
+	if nodes != expected_nodes { fmt.printf("Starting position depth 6 failed, expected: %lld, got: %lld\n", expected_nodes, nodes); return}
+	fmt.println("Starting positon passed")
+
+	reset(game.board)
+	load_fen(game.board, "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1")
+	expected_nodes = 15833292
+	nodes = run_perft(game.board, game.masks, 5, false)
+	if nodes != expected_nodes { fmt.printf("Position 3 depth 5 failed, expected: %lld, got: %lld\n", expected_nodes, nodes); return}
+	fmt.println("Possiton 3 passed")
+
+	fmt.println("\nTest suite passed")
 }
 
 run :: proc(game : ^S_Game) {

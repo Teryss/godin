@@ -25,6 +25,29 @@ update_occupied :: #force_inline proc(board: ^S_Board){
     }
 }
 
+reset :: proc (board: ^S_Board){
+	for i in 0..<12{
+		board.pieces[i] = 0
+	}
+	for i in 0..<3{
+		board.occupied[i] = 0
+	}
+	board.fiftyMoves = 0
+	board.castlePerm = 0
+	board.ply = 0
+	board.enPas = u8(SQUARES.NO_SQR)
+	for i in 0..<12{
+		for j in 0..<64{
+			board.moveHistory[i][j] = 0
+		}
+	}
+	for i in 0..<2{
+		for j in 0..<MAX_PLY{
+			board.killer_moves[i][j] = 0
+		}
+	}
+}
+
 load_fen :: proc(board: ^S_Board, fen: string){
 	fen_split : [6]string;
 	temp : [dynamic]u8;
