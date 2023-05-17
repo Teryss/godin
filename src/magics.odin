@@ -69,6 +69,8 @@ get_random_number :: #force_inline proc() -> u64 {
     return get_random_u64()
 }
 
+// Code for getting magic numbers
+
 // get_magic_number :: proc(masks: ^S_Attack_masks, sqr: int, relevant_bits: int, bishop: bool) -> u64 {
 //     occupancies : [4096]u64;
 //     attacks : [4096]u64;
@@ -78,9 +80,9 @@ get_random_number :: #force_inline proc() -> u64 {
 //     occupancy_indicies : uint = 1 << uint(relevant_bits);
     
 //     for i in 0..<occupancy_indicies{
-//         occupancies[i] = set_occupancy(int(i), relevant_bits, mask);
-//         attacks[i] = bishop ? mask_bishop_attacks_on_fly(uint(sqr), &occupancies[i]) :
-//                             mask_rook_attacks_on_fly(uint(sqr), &occupancies[i]);
+//         occupancies[i] = set_occupancy(uint(i), uint(relevant_bits), mask);
+//         attacks[i] = bishop ? mask_bishop_attacks_on_fly(u8(sqr), &occupancies[i]) :
+//                             mask_rook_attacks_on_fly(u8(sqr), &occupancies[i]);
 //     }
 
 //     for _ in 0..<10000000{
@@ -114,11 +116,11 @@ get_random_number :: #force_inline proc() -> u64 {
 // get_magics :: proc(masks: ^S_Attack_masks){
 //     fmt.println("Rook magics:")
 // 	for i in 0..<64{
-// 		fmt.println(get_magic_number(masks, i, RELEVANT_OCCUPANCY_BITS_ROOK[i], false),",")
+// 		fmt.println(get_magic_number(masks, i, int(RELEVANT_OCCUPANCY_BITS_ROOK[i]), false),",")
 // 	}
 // 	fmt.println("\nBishop magics:")
 // 	for i in 0..<64{
-// 		fmt.println(get_magic_number(masks, i, RELEVANT_OCCUPANCY_BITS_BISHOP[i], true),",")
+// 		fmt.println(get_magic_number(masks, i, int(RELEVANT_OCCUPANCY_BITS_BISHOP[i]), true),",")
 // 	}
 // }
 

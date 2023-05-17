@@ -5,8 +5,8 @@ import "core:fmt"
 print_bitboard :: proc(bb: u64){
 	bb_p : u64 = bb;
 	r, f : u8 = 0, 0
-	for r : u8 = 0; r < 8; r+=1{
-		for f : u8 = 0; f < 8; f+=1{
+	for r = 0; r < 8; r+=1{
+		for f = 0; f < 8; f+=1{
 			if f == 0{
 				fmt.printf("    %d ", 8 - r);
 			}

@@ -1,6 +1,8 @@
 package main
 
 UP :: 8;
+// Used only in get_target_piece
+start, end : u8 = 0, 6
 
 is_square_attacked :: #force_inline proc (board: ^S_Board, masks: ^S_Attack_masks, sqr: u8, by_side: COLOR) -> bool{
 	using COLOR;
@@ -20,13 +22,16 @@ is_king_in_check :: #force_inline proc(board: ^S_Board, masks: ^S_Attack_masks) 
 	board.whitesMove = !board.whitesMove
 	return is_in_check
 }
-get_target_piece :: #force_inline proc (borad: ^S_Board, to_sqr : u8) -> u8{
-	for i : u8 = 0; i < 12; i+=1{
-		if get_bit(&borad.pieces[i], to_sqr) > 0{
+get_target_piece :: #force_inline proc (board: ^S_Board, to_sqr : u8) -> u8{
+	if board.whitesMove { start = 0; end = 6; }
+	else { start = 6; end = 12; }
+	for i : u8 = start; i < end; i+=1{
+		if get_bit(&board.pieces[i], to_sqr) > 0{
 			return i;
 		}
 	}
-	return 15;
+	assert(0 == 1, "get_target_piece proc did not find target piece")
+	return 15
 }
 add_move :: #force_inline proc(board: ^S_Board, moves_count: ^u8, move: u64, move_list: ^[256]u64){
 	move_list[moves_count^] = add_info_to_encoded_move(board, move);

@@ -163,6 +163,7 @@ quiescence :: proc (board: ^S_Board, masks: ^S_Attack_masks, alpha: i32, beta: i
     moves_count := generate_pseudo_moves(board, masks, &moves)
 
     // with depth search limitation it's not effective to sort moves
+    // otherwise, it's faster to sort moves before search
     // sort_moves(board, &moves, moves_count)
 
     for i in 0..<moves_count{
